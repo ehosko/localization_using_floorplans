@@ -1,0 +1,48 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/michbaum/Projects/optag_EH/devel/include/**",
+        "/opt/ros/melodic/include/**",
+        "/home/michbaum/Projects/optag_EH/src/optimal_active_guidance_in_mixed_reality_using_prior_floorplans/active_3d_planning_core/include/**",
+        "/home/michbaum/Projects/optag_EH/src/optimal_active_guidance_in_mixed_reality_using_prior_floorplans/active_3d_planning_mav/include/**",
+        "/home/michbaum/Projects/optag_EH/src/optimal_active_guidance_in_mixed_reality_using_prior_floorplans/active_3d_planning_ros/include/**",
+        "/home/michbaum/Projects/optag_EH/src/optimal_active_guidance_in_mixed_reality_using_prior_floorplans/active_3d_planning_voxblox/include/**",
+        "/home/michbaum/Projects/optag_EH/src/eigen_checks/include/**",
+        "/home/michbaum/Projects/optag_EH/src/mav_control_rw/mav_control_interface/include/**",
+        "/home/michbaum/Projects/optag_EH/src/mav_control_rw/mav_disturbance_observer/include/**",
+        "/home/michbaum/Projects/optag_EH/src/mav_control_rw/mav_linear_mpc/include/**",
+        "/home/michbaum/Projects/optag_EH/src/mav_control_rw/mav_lowlevel_attitude_controller/include/**",
+        "/home/michbaum/Projects/optag_EH/src/mav_comm/mav_msgs/include/**",
+        "/home/michbaum/Projects/optag_EH/src/mav_control_rw/mav_nonlinear_mpc/include/**",
+        "/home/michbaum/Projects/optag_EH/src/mav_comm/mav_planning_msgs/include/**",
+        "/home/michbaum/Projects/optag_EH/src/mav_trajectory_generation/mav_trajectory_generation/include/**",
+        "/home/michbaum/Projects/optag_EH/src/mav_trajectory_generation/mav_trajectory_generation_example/include/**",
+        "/home/michbaum/Projects/optag_EH/src/mav_trajectory_generation/mav_trajectory_generation_ros/include/**",
+        "/home/michbaum/Projects/optag_EH/src/mav_trajectory_generation/mav_visualization/include/**",
+        "/home/michbaum/Projects/optag_EH/src/minkindr/minkindr/include/**",
+        "/home/michbaum/Projects/optag_EH/src/minkindr_ros/minkindr_conversions/include/**",
+        "/home/michbaum/Projects/optag_EH/src/nlopt/include/**",
+        "/home/michbaum/Projects/optag_EH/src/numpy_eigen/include/**",
+        "/home/michbaum/Projects/optag_EH/src/rotors_simulator/rotors_control/include/**",
+        "/home/michbaum/Projects/optag_EH/src/rotors_simulator/rotors_gazebo_plugins/include/**",
+        "/home/michbaum/Projects/optag_EH/src/rotors_simulator/rotors_hil_interface/include/**",
+        "/home/michbaum/Projects/optag_EH/src/rotors_simulator/rotors_joy_interface/include/**",
+        "/home/michbaum/Projects/optag_EH/src/voxblox/voxblox/include/**",
+        "/home/michbaum/Projects/optag_EH/src/voxblox/voxblox_ros/include/**",
+        "/home/michbaum/Projects/optag_EH/src/voxblox/voxblox_rviz_plugin/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

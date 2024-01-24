@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>localization_using_floorplans</name>
+  <version>0.0.0</version>
+  <description>Localization using prior floorplans.</description>
+
+  <maintainer email="ehoskovec@student.ethz.ch">Elisa Hoskovec</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>catkin_simple</buildtool_depend>
+
+  <depend>active_3d_planning_core</depend>
+    <depend>active_3d_planning_ros</depend>
+    <depend>active_3d_planning_mav</depend>
+    <depend>active_3d_planning_voxblox</depend>
+    <depend>roscpp</depend>
+    <depend>rospy</depend>
+    <!-- <depend>voxblox_ros</depend>
+    <depend>voxblox</depend> -->
+    <depend>trajectory_msgs</depend>
+    <depend>mav_msgs</depend>
+    <depend>std_msgs</depend>
+    <depend>sensor_msgs</depend>
+    <depend>geometry_msgs</depend>
+    <depend>nav_msgs</depend>
+  
+  <export>
+
+  </export>
+</package>
