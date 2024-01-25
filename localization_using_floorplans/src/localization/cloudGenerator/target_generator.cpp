@@ -16,8 +16,11 @@ void TargetGenerator::initTargetGenerator(ros::NodeHandle& nh)
 {
     // Initialize TargetGenerator
     std::cout << "Initializing TargetGenerator..." << std::endl;
-    nh.getParam("floorplan_node/l_max", l_max);
-    std::cout << "l_max: " << l_max << std::endl;
+    nh.getParam("floorplan_node/l_max", l_max_);
+    std::cout << "l_max: " << l_max_ << std::endl;
+
+    computeContours();
+    divideContours();
 
     // Initialize SimpleRayCaster
     raycaster_ = SimpleRayCaster();
@@ -28,17 +31,14 @@ void TargetGenerator::generateTargetCloud()
 {
     // Generate target cloud
     std::cout << "Generating target cloud..." << std::endl;
-    std::cout << "Getting Contours..." << std::endl;
-    computeContours();
-    std::cout << "Dividing Contours..." << std::endl;
-    std::vector<cv::Point> candidates = divideContours();
-    std::cout << "Number of candidates: " << candidates.size() << std::endl;
+  
+    std::cout << "Number of candidates: " << candidate_points_.size() << std::endl;
     std::cout << "Filter Points..." << std::endl;
     //filterAccesiblePoints(candidates);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr targetCloud(new pcl::PointCloud<pcl::PointXYZ>);
 
-    for (const cv::Point& point : candidates)
+    for (const cv::Point& point : candidate_points_)
     {
         pcl::PointXYZ pcl_point;
         pcl_point.x = static_cast<float>(point.x);
@@ -55,53 +55,53 @@ void TargetGenerator::generateTargetCloud()
     std::cout << "Target cloud generated of size " << _targetCloud.width << std::endl;
 
     // Save target cloud to file
-    pcl::PCDWriter w;
-    std::string file_name = "/home/michbaum/ElisaSemesterProject/data/pcdData/targetCloud.pcd";
-    w.write<pcl::PointXYZ> (file_name, _targetCloud, false);
+    // pcl::PCDWriter w;
+    // std::string file_name = "/home/michbaum/ElisaSemesterProject/data/pcdData/targetCloud.pcd";
+    // w.write<pcl::PointXYZ> (file_name, _targetCloud, false);
 }
 
 void TargetGenerator::computeContours()
 {
     // Convert the image to grayscale
     cv::Mat imgray;
-    cv::cvtColor(image, imgray, cv::COLOR_BGR2GRAY);
+    cv::cvtColor(image_, imgray, cv::COLOR_BGR2GRAY);
 
     // Apply thresholding
     cv::Mat thresh;
     cv::threshold(imgray, thresh, 127, 255, 0);
 
     // See which makes more sense in retrieving segements
-    cv::findContours(thresh, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
+    cv::findContours(thresh, contours_, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
     //cv::findContours(thresh, contours, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
 }
 
 // Divide contours into segments < l_max
-std::vector<cv::Point> TargetGenerator::divideContours()
+void TargetGenerator::divideContours()
 {
-    std::vector<cv::Point> candidatePoints;
+    //std::vector<cv::Point> candidatePoints;
 
-    int num_contours = contours.size();
+    int num_contours = contours_.size();
     for(int i = 0; i < num_contours; i++)
     {
         int j = 0;
-        for(j = 0; j < contours[i].size() - 1; j++)
+        for(j = 0; j < contours_[i].size() - 1; j++)
         {
             // Check if distance between points is greater than l_max
             // If so, add new point to contours[i] at index j
-            double dist = getDistance(contours[i][j], contours[i][j+1]);
-            if(dist > l_max)
+            double dist = getDistance(contours_[i][j], contours_[i][j+1]);
+            if(dist > l_max_)
             {
                 // Divide contour into segments of length l_max
                 // Calculate the number of segments needed
-                int num_segments = std::ceil(dist / l_max);
+                int num_segments = std::ceil(dist / l_max_);
 
                 // Calculate the segment length
                 int segment_length = std::ceil(dist / num_segments);
 
-                cv::Point startPoint = contours[i][j];
-                cv::Point diff = contours[i][j+1] - contours[i][j];
+                cv::Point startPoint = contours_[i][j];
+                cv::Point diff = contours_[i][j+1] - contours_[i][j];
 
-                candidatePoints.push_back(startPoint);
+                candidate_points_.push_back(startPoint);
                 // Divide contour into segments of length l_max
                 for(int k = 1; k < num_segments - 1; k++)
                 {
@@ -109,22 +109,22 @@ std::vector<cv::Point> TargetGenerator::divideContours()
                     cv::Point new_point = startPoint + diff * (segment_length * k / dist);
 
                     // Insert the new point at the appropriate index in the contour
-                    candidatePoints.push_back(new_point);
+                    candidate_points_.push_back(new_point);
                 }
-                candidatePoints.push_back(contours[i][j+1]);
+                candidate_points_.push_back(contours_[i][j+1]);
             }else
             {
                 // Add point to candidatePoints
-                candidatePoints.push_back(contours[i][j]);
+                candidate_points_.push_back(contours_[i][j]);
             } 
         }
-        candidatePoints.push_back(contours[i][j]);
+        candidate_points_.push_back(contours_[i][j]);
     }
 
-    return candidatePoints;
+    //return candidatePoints;
 }
 
-void TargetGenerator::filterAccesiblePoints(const std::vector<cv::Point>& candidates, Eigen::Vector2d position, Eigen::Quaterniond orientation)
+void TargetGenerator::filterAccesiblePoints(const std::vector<cv::Point>& candidates, Eigen::Vector3d position, Eigen::Quaterniond orientation)
 {
     
     std::vector<cv::Point> accessiblePoints;
@@ -138,8 +138,8 @@ void TargetGenerator::filterAccesiblePoints(const std::vector<cv::Point>& candid
     raycaster_.getVisibleVoxels(&foVPoints,position, orientation, candidates);
 
 
-    std:: cout << "Number of candidates: " << candidates.size() << std::endl;
-    std::vector<cv::Point> foVPoints(&candidates[0], &candidates[0] + candidates.size() / 10);
+    // std:: cout << "Number of candidates: " << candidates.size() << std::endl;
+    // std::vector<cv::Point> foVPoints(&candidates[0], &candidates[0] + candidates.size() / 10);
     std:: cout << "Number of FoV candidates: " << foVPoints.size() << std::endl;
 
     // Filter out points that cannot be connected by A*
@@ -170,8 +170,7 @@ double TargetGenerator::getDistance(cv::Point p1, cv::Point p2)
 
 std::vector<cv::Point> TargetGenerator::getSegments()
 {
-    computeContours();
-    return divideContours();
+    return candidate_points_;
 }
 
 struct Node

@@ -5,10 +5,6 @@ SimpleRayCaster::SimpleRayCaster(double ray_length, double voxel_size)
     // Constructor
 }
 
-SimpleRayCaster::~SimpleRayCaster()
-{
-    // Destructor
-}
 
 void SimpleRayCaster::initSimpleRayCaster(ros::NodeHandle& nh)
 {
@@ -39,7 +35,7 @@ void SimpleRayCaster::initSimpleRayCaster(ros::NodeHandle& nh)
 }
 
 bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point>* result,
-                                       const Eigen::Vector2d& position,
+                                       const Eigen::Vector3d& position,
                                        const Eigen::Quaterniond& orientation,
                                        const std::vector<cv::Point>& candidates)
 {
@@ -64,7 +60,7 @@ bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point>* result,
             distance += p_ray_step_;
 
             // Check voxel occupied
-            if (containingPoint(candidates, Eigen::Vector2d(current_position.x(), current_position.y()), observed_point)){
+            if (containingPoint(candidates, Eigen::Vector3d(current_position.x(), current_position.y(),0), observed_point)){
                 result->push_back(observed_point);
                 break;
             }
@@ -86,7 +82,7 @@ void SimpleRayCaster::getDirectionVector(Eigen::Vector3d* result, double relativ
           .normalized();
 }
 
-bool containingPoint(const std::vector<cv::Point>& points, const Eigen::Vector2d& point, cv::Point& result)
+bool SimpleRayCaster::containingPoint(const std::vector<cv::Point>& points, const Eigen::Vector3d& point, cv::Point& result)
 {
     for(int i = 0; i < points.size(); i++)
     {

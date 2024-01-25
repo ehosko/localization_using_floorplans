@@ -17,14 +17,14 @@ class SimpleRayCaster{
   void initSimpleRayCaster(ros::NodeHandle& nh);
 
   bool getVisibleVoxels(std::vector<cv::Point>* result,
-              const Eigen::Vector2d& position,
+              const Eigen::Vector3d& position,
               const Eigen::Quaterniond& orientation,
               const std::vector<cv::Point>& candidates);
 
   void getDirectionVector(Eigen::Vector3d* result, double relative_x,
                           double relative_y);
 
-  bool containingPoint(const std::vector<cv::Point>& points, const Eigen::Vector2d& point, cv::Point& result);
+  bool containingPoint(const std::vector<cv::Point>& points, const Eigen::Vector3d& point, cv::Point& result);
 
  protected:
 
