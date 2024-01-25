@@ -5,7 +5,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
+#include <ros/ros.h>
 
+#include "../utils/simple_ray_caster.h"
 
 class TargetGenerator
 {
@@ -13,6 +15,8 @@ class TargetGenerator
         TargetGenerator(); // Constructor
         TargetGenerator(std::string image_path) : image(cv::imread(image_path)) {} // Constructor
         ~TargetGenerator(); // Destructor
+
+        void initTargetGenerator(ros::NodeHandle& nh);
 
         void generateTargetCloud();
         std::vector<std::vector<cv::Point>> getContours(){return contours;};
@@ -25,7 +29,7 @@ class TargetGenerator
     private:
         void computeContours();
         std::vector<cv::Point> divideContours();
-        void filterAccesiblePoints(const std::vector<cv::Point>&);
+        void filterAccesiblePoints(const std::vector<cv::Point>&,Eigen::Vector2d position, Eigen::Quaterniond orientation);
         double getDistance(cv::Point, cv::Point);
         
 
@@ -34,6 +38,8 @@ class TargetGenerator
         std::vector<std::vector<cv::Point>> contours; //Contours
         int l_max = 20; //Max length of segment
         //PCL Point Cloud
+
+        SimpleRayCaster raycaster_;
 
 };
 

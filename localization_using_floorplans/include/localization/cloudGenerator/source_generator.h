@@ -4,6 +4,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/filters/project_inliers.h>
 #include <eigen3/Eigen/Geometry>
+#include <ros/ros.h>
 
 class SourceGenerator
 {
@@ -11,6 +12,7 @@ class SourceGenerator
         SourceGenerator(); // Constructor
         ~SourceGenerator(); // Destructor
 
+        void initSourceGenerator(ros::NodeHandle& nh);
 
         void ProjectOnFloor(pcl::PointCloud<pcl::PointXYZ> depthCloud,Eigen::Quaterniond q);
         void RemoveOutliers();

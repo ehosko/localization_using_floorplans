@@ -22,10 +22,11 @@ void SimpleLocalizer::setupFromParam()
     std::cout << "Setting up from param..." << std::endl;
 
     nh_.getParam("floorplan_node/floorplan_path", floorplan_path);
-    nh_.getParam("floorplan_node/ray_length", ray_length);
+    // nh_.getParam("floorplan_node/ray_length", ray_length);
 
     sourceGenerator_ = SourceGenerator();
     targetGenerator_ = TargetGenerator(floorplan_path);
+    targetGenerator_.initTargetGenerator(nh_);
 
 
     std::cout << "Floorplan path: " << floorplan_path << std::endl;
@@ -57,6 +58,7 @@ int SimpleLocalizer::computeTransformationGICP(pcl::PointCloud<pcl::PointXYZ> so
     return gicp.hasConverged();
 }
 
+
 void SimpleLocalizer::localize()
 {
     // Set up publisher and subscriber
@@ -67,5 +69,14 @@ void SimpleLocalizer::localize()
     // }
 }
 
+void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
+{
+    // Here check if odometry changed enough to update the position
+}   
+
+void SimpleLocalizer::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
+{
+    // Here only save the current cloud
+}
 
 

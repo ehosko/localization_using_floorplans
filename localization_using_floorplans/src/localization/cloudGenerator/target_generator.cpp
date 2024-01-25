@@ -12,6 +12,18 @@ TargetGenerator::~TargetGenerator()
     // Destructor
 }
 
+void TargetGenerator::initTargetGenerator(ros::NodeHandle& nh)
+{
+    // Initialize TargetGenerator
+    std::cout << "Initializing TargetGenerator..." << std::endl;
+    nh.getParam("floorplan_node/l_max", l_max);
+    std::cout << "l_max: " << l_max << std::endl;
+
+    // Initialize SimpleRayCaster
+    raycaster_ = SimpleRayCaster();
+    raycaster_.initSimpleRayCaster(nh);
+}
+
 void TargetGenerator::generateTargetCloud()
 {
     // Generate target cloud
@@ -22,7 +34,7 @@ void TargetGenerator::generateTargetCloud()
     std::vector<cv::Point> candidates = divideContours();
     std::cout << "Number of candidates: " << candidates.size() << std::endl;
     std::cout << "Filter Points..." << std::endl;
-    filterAccesiblePoints(candidates);
+    //filterAccesiblePoints(candidates);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr targetCloud(new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -112,7 +124,7 @@ std::vector<cv::Point> TargetGenerator::divideContours()
     return candidatePoints;
 }
 
-void TargetGenerator::filterAccesiblePoints(const std::vector<cv::Point>& candidates)
+void TargetGenerator::filterAccesiblePoints(const std::vector<cv::Point>& candidates, Eigen::Vector2d position, Eigen::Quaterniond orientation)
 {
     
     std::vector<cv::Point> accessiblePoints;
@@ -122,6 +134,9 @@ void TargetGenerator::filterAccesiblePoints(const std::vector<cv::Point>& candid
 
     // Filter out points that are not in FoV
     // Camera Model: getVisibleVoxels()
+    std::vector<cv::Point> foVPoints;
+    raycaster_.getVisibleVoxels(&foVPoints,position, orientation, candidates);
+
 
     std:: cout << "Number of candidates: " << candidates.size() << std::endl;
     std::vector<cv::Point> foVPoints(&candidates[0], &candidates[0] + candidates.size() / 10);

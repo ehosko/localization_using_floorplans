@@ -9,8 +9,17 @@
         <param name="floorplan_origin_z" value="0.0"/>
 
         <param name="ray_length" value="5.0"/>
+        <param name="sampling_time" value="0.0"/>
+        <param name="focal_length" value="320.0"/>
+        <param name="resolution_x" value="640"/>
+        <param name="resolution_y" value="480"/>
+        <param name="voxel_size" value="0.01"/>
+        <param name="ray_step" value="0.01"/>
+        <param name="downsampling_factor" value="1.0"/>
+
 
         <param name="max_segment_length" value="20"/>
+
     </node>
 
 </launch>

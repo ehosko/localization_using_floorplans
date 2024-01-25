@@ -3,18 +3,28 @@
 
 #include <vector>
 #include <Eigen/Geometry>
+#include <pcl/point_types.h>
+#include <opencv2/core/types.hpp>
+#include <ros/ros.h>
 
 class SimpleRayCaster{
  public:
   SimpleRayCaster(double ray_length,double voxel_size);  // NOLINT
+  SimpleRayCaster() = default;
 
   ~SimpleRayCaster() = default;
 
-  bool getVisibleVoxels(std::vector<Eigen::Vector3d>* result,
-                        const Eigen::Vector3d& position,
-                        const Eigen::Quaterniond& orientation);
+  void initSimpleRayCaster(ros::NodeHandle& nh);
+
+  bool getVisibleVoxels(std::vector<cv::Point>* result,
+              const Eigen::Vector2d& position,
+              const Eigen::Quaterniond& orientation,
+              const std::vector<cv::Point>& candidates);
+
   void getDirectionVector(Eigen::Vector3d* result, double relative_x,
                           double relative_y);
+
+  bool containingPoint(const std::vector<cv::Point>& points, const Eigen::Vector2d& point, cv::Point& result);
 
  protected:
 
@@ -28,9 +38,9 @@ class SimpleRayCaster{
   int c_res_y_;
   
   double p_ray_length_;
-    double p_focal_length_;
-    int p_resolution_x_;
-    int p_resolution_y_;
+  double p_focal_length_;
+  int p_resolution_x_;
+  int p_resolution_y_;
     
 };
 
