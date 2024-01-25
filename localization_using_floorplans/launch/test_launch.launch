@@ -1,0 +1,16 @@
+<launch>
+
+    <node name="floorplan_node" pkg="localization_using_floorplans" type="ros_localization_node" output="screen">
+        <param name="floorplan_path" value="/data/floorplan_1.png"/>
+        <param name="floorplan_resolution" value="0.1"/>
+        <param name="floorplan_height" value="2.5"/>
+        <param name="floorplan_origin_x" value="0.0"/>
+        <param name="floorplan_origin_y" value="0.0"/>
+        <param name="floorplan_origin_z" value="0.0"/>
+
+        <param name="ray_length" value="5.0"/>
+
+        <param name="max_segment_length" value="20"/>
+    </node>
+
+</launch>
