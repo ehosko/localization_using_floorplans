@@ -18,7 +18,7 @@ class TargetGenerator
 
         void initTargetGenerator(ros::NodeHandle& nh);
 
-        void generateTargetCloud();
+        void generateTargetCloud(Eigen::Vector3d position, Eigen::Quaterniond orientation);
         std::vector<std::vector<cv::Point>> getContours(){return contours_;};
         std::vector<cv::Point> getSegments();
         bool aStar(cv::Point, cv::Point, std::vector<cv::Point>&);
@@ -35,6 +35,13 @@ class TargetGenerator
 
         //Parameters
         cv::Mat image_; //OpenCV Image
+
+        int image_width_ = 0; //Image width
+        int image_height_ = 0; //Image height
+
+        int experiment_width_ = 0; //Floorplan width
+        int experiment_height_ = 0; //Floorplan height
+
         std::vector<std::vector<cv::Point>> contours_; //Contours
         std::vector<cv::Point> candidate_points_; //Contours
         int l_max_ = 20; //Max length of segment

@@ -17,7 +17,11 @@ void TargetGenerator::initTargetGenerator(ros::NodeHandle& nh)
     // Initialize TargetGenerator
     std::cout << "Initializing TargetGenerator..." << std::endl;
     nh.getParam("floorplan_node/l_max", l_max_);
-    std::cout << "l_max: " << l_max_ << std::endl;
+    nh.getParam("floorplan_node/floorplan_width", experiment_width_);
+    nh.getParam("floorplan_node/floorplan_height", experiment_height_);
+
+    image_height_ = image_.rows;
+    image_width_ = image_.cols;
 
     computeContours();
     divideContours();
@@ -27,22 +31,31 @@ void TargetGenerator::initTargetGenerator(ros::NodeHandle& nh)
     raycaster_.initSimpleRayCaster(nh);
 }
 
-void TargetGenerator::generateTargetCloud()
+void TargetGenerator::generateTargetCloud(Eigen::Vector3d position, Eigen::Quaterniond orientation)
 {
     // Generate target cloud
     std::cout << "Generating target cloud..." << std::endl;
   
-    std::cout << "Number of candidates: " << candidate_points_.size() << std::endl;
+    
     std::cout << "Filter Points..." << std::endl;
-    //filterAccesiblePoints(candidates);
+    std::vector<cv::Point> candidates = candidate_points_;
+    filterAccesiblePoints(candidates,position, orientation);
+    candidate_points_ = candidates;
 
+    std::cout << "Number of candidates: " << candidate_points_.size() << std::endl;
     pcl::PointCloud<pcl::PointXYZ>::Ptr targetCloud(new pcl::PointCloud<pcl::PointXYZ>);
 
     for (const cv::Point& point : candidate_points_)
     {
+        cv::Point2f current_point = point;
+
+        // Transform points to experiment coordinates
+        current_point.x = current_point.x * ((double)experiment_width_/image_width_) - 0.5*experiment_width_;
+        current_point.y = current_point.y * ((double)experiment_height_/image_height_) - 0.5*experiment_height_;
+
         pcl::PointXYZ pcl_point;
-        pcl_point.x = static_cast<float>(point.x);
-        pcl_point.y = static_cast<float>(point.y);
+        pcl_point.x = static_cast<float>(current_point.x);
+        pcl_point.y = static_cast<float>(current_point.y);
         pcl_point.z = 0.0;  // Assuming 2D points with z=0
 
         targetCloud->points.push_back(pcl_point);
@@ -79,6 +92,8 @@ void TargetGenerator::computeContours()
 void TargetGenerator::divideContours()
 {
     //std::vector<cv::Point> candidatePoints;
+    cv::Point current_point;
+    cv::Point next_point;
 
     int num_contours = contours_.size();
     for(int i = 0; i < num_contours; i++)
@@ -86,9 +101,13 @@ void TargetGenerator::divideContours()
         int j = 0;
         for(j = 0; j < contours_[i].size() - 1; j++)
         {
+
+            current_point = contours_[i][j];
+            next_point = contours_[i][j+1];
+
             // Check if distance between points is greater than l_max
             // If so, add new point to contours[i] at index j
-            double dist = getDistance(contours_[i][j], contours_[i][j+1]);
+            double dist = getDistance(current_point, next_point);
             if(dist > l_max_)
             {
                 // Divide contour into segments of length l_max
@@ -98,27 +117,28 @@ void TargetGenerator::divideContours()
                 // Calculate the segment length
                 int segment_length = std::ceil(dist / num_segments);
 
-                cv::Point startPoint = contours_[i][j];
-                cv::Point diff = contours_[i][j+1] - contours_[i][j];
+                cv::Point startPoint = current_point;
+                cv::Point diff = next_point - current_point;
 
                 candidate_points_.push_back(startPoint);
                 // Divide contour into segments of length l_max
                 for(int k = 1; k < num_segments - 1; k++)
                 {
                     // Calculate the position of the new point
-                    cv::Point new_point = startPoint + diff * (segment_length * k / dist);
+                    cv::Point2d new_point = startPoint + diff * (segment_length * k / dist);
 
                     // Insert the new point at the appropriate index in the contour
                     candidate_points_.push_back(new_point);
                 }
-                candidate_points_.push_back(contours_[i][j+1]);
+                candidate_points_.push_back(next_point);
             }else
             {
                 // Add point to candidatePoints
-                candidate_points_.push_back(contours_[i][j]);
+                candidate_points_.push_back(current_point);
             } 
         }
-        candidate_points_.push_back(contours_[i][j]);
+        current_point = contours_[i][j];
+        candidate_points_.push_back(current_point);
     }
 
     //return candidatePoints;
@@ -233,9 +253,9 @@ bool TargetGenerator::aStar(cv::Point start, cv::Point goal, std::vector<cv::Poi
 {
     // Boundaries
     int x_min = 0;
-    int x_max = 700;
+    int x_max = image_width_;
     int y_min = 0;
-    int y_max = 700;
+    int y_max = image_height_;
 
     // Astar algorithm to find path from start to goal
     // Return true if path is found, false otherwise
