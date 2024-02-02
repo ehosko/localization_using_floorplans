@@ -137,15 +137,29 @@ void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
         // Here generate the source cloud
         targetGenerator_.generateTargetCloud(position_, orientation_);
         sourceGenerator_.ProjectOnFloor(depthCloud_, orientation_);
-        // Here compute the transformation matrix
-        int hasConverged = computeTransformationGICP(sourceGenerator_._sourceCloud, targetGenerator_._targetCloud, transformationMatrix_);
-        //std::cout << "Transformation matrix: " << std::endl << transformationMatrix << std::endl;
-        //std::cout << "Has converged: " << hasConverged << std::endl;
-        ROS_INFO("\n******************** Has converged:  %d ********************\n", hasConverged);
 
-        if(hasConverged){
+        if(sourceGenerator_._sourceCloud.size() > 0 && targetGenerator_._targetCloud.size() > 0)
+        {
+            // Here compute the transformation matrix
+            int hasConverged = computeTransformationGICP(sourceGenerator_._sourceCloud, targetGenerator_._targetCloud, transformationMatrix_);
+            //std::cout << "Transformation matrix: " << std::endl << transformationMatrix << std::endl;
+            //std::cout << "Has converged: " << hasConverged << std::endl;
+            ROS_INFO("\n******************** Has converged:  %d ********************\n", hasConverged);
+
+            if(hasConverged){
             publishTransformation();
+            }
         }
+        else
+        {
+            std::cout << "No source or target cloud" << std::endl;
+
+            // (TODO): do something
+        }
+
+        targetGenerator_.cleanTargetCloud();
+        sourceGenerator_.cleanSourceCloud();
+    
     }
 }   
 

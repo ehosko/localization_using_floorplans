@@ -24,7 +24,8 @@ class SimpleRayCaster{
   bool getVisibleVoxels(std::vector<cv::Point2f>* result,
               const Eigen::Vector3d& position,
               const Eigen::Quaterniond& orientation,
-              const std::vector<cv::Point2f>& candidates);
+              const std::vector<cv::Point2f>& candidates,
+              std::vector<double>& boundaries);
 
   void getDirectionVector(Eigen::Vector3d* result, double relative_x,
                           double relative_y);

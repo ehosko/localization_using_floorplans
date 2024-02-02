@@ -21,6 +21,8 @@ class SourceGenerator
 
         pcl::PointCloud<pcl::PointXYZ> _sourceCloud;
 
+        void cleanSourceCloud();
+
     private:
 
 };

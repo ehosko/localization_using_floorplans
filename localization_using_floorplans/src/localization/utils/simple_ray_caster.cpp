@@ -56,8 +56,12 @@ void SimpleRayCaster::initSimpleRayCaster(ros::NodeHandle& nh)
 bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point2f>* result,
                                        const Eigen::Vector3d& position,
                                        const Eigen::Quaterniond& orientation,
-                                       const std::vector<cv::Point2f>& candidates)
+                                       const std::vector<cv::Point2f>& candidates,
+                                       std::vector<double>& boundaries)
 {
+    std::cout << "Getting visible voxels..." << std::endl;
+    std::cout << "Candidates size: " << candidates.size() << std::endl;
+
     // Naive ray-casting
     Eigen::Vector3d camera_direction;
     Eigen::Vector3d direction;
@@ -65,6 +69,11 @@ bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point2f>* result,
     Eigen::Vector3d voxel_center;
 
     cv::Point2f observed_point;
+
+    double x_min = std::numeric_limits<double>::max();
+    double x_max = std::numeric_limits<double>::min();
+    double y_min = std::numeric_limits<double>::max();
+    double y_max = std::numeric_limits<double>::min();
 
     # pragma omp parallel
     for (int i = 0; i < c_res_x_; ++i) {
@@ -78,6 +87,15 @@ bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point2f>* result,
         while (distance < p_ray_length_) {
             current_position = position + distance * direction;
             distance += p_ray_step_;
+
+            if (current_position.x() < x_min)
+                x_min = current_position.x();
+            if (current_position.x() > x_max)
+                x_max = current_position.x();
+            if (current_position.y() < y_min)
+                y_min = current_position.y();
+            if (current_position.y() > y_max)
+                y_max = current_position.y();
 
             // Check voxel occupied
             if (containingPoint(candidates, Eigen::Vector3d(current_position.x(), current_position.y(),0), observed_point)){
@@ -95,6 +113,12 @@ bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point2f>* result,
         }
         }
     }
+
+    boundaries.push_back(x_min);
+    boundaries.push_back(x_max);
+    boundaries.push_back(y_min);
+    boundaries.push_back(y_max);
+
     pointsFile_.close();
     return true;
 }

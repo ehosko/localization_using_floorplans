@@ -23,7 +23,9 @@ class TargetGenerator
         void generateTargetCloud(Eigen::Vector3d position, Eigen::Quaterniond orientation);
         std::vector<std::vector<cv::Point>> getContours(){return contours_;};
         std::vector<cv::Point2f> getSegments();
-        bool aStar(cv::Point2f, cv::Point2f, std::vector<cv::Point2f>&);
+        bool aStar(cv::Point2f, cv::Point2f, std::vector<cv::Point2f>&,double x_min, double x_max, double y_min, double y_max);
+
+        void cleanTargetCloud();
 
         //Public Member
         pcl::PointCloud<pcl::PointXYZ> _targetCloud;
@@ -31,7 +33,7 @@ class TargetGenerator
     private:
         void computeContours();
         void divideContours();
-        void filterAccesiblePoints(const std::vector<cv::Point2f>&,Eigen::Vector3d position, Eigen::Quaterniond orientation);
+        void filterAccesiblePoints(std::vector<cv::Point2f>&,const std::vector<cv::Point2f>&,Eigen::Vector3d position, Eigen::Quaterniond orientation);
         double getDistance(cv::Point2f, cv::Point2f);
         
 
@@ -45,7 +47,10 @@ class TargetGenerator
         int experiment_height_ = 0; //Floorplan height
 
         std::vector<std::vector<cv::Point>> contours_; //Contours
-        std::vector<cv::Point2f> candidate_points_; //Contours
+        std::vector<cv::Point2f> segments_; //Segments
+
+        std::vector<cv::Point2f> candidate_points_; //Candidate points
+        
         int l_max_ = 20; //Max length of segment
         //PCL Point Cloud
 

@@ -95,3 +95,10 @@ void SourceGenerator::RemoveOutliersGICP()
     // _sourceCloud = *sourceCloudFilteredPtr;
     // std::cout << "Outliers removed from source cloud of size " << _sourceCloud.width << std::endl;
 }   
+
+
+void SourceGenerator::cleanSourceCloud()
+{
+    // Clean source cloud
+    _sourceCloud.clear();
+}
