@@ -6,6 +6,7 @@
 #include <pcl/point_types.h>
 #include <opencv2/core/types.hpp>
 #include <ros/ros.h>
+#include <fstream>
 
 class SimpleRayCaster{
  public:
@@ -14,17 +15,23 @@ class SimpleRayCaster{
 
   ~SimpleRayCaster() = default;
 
+  //SimpleRayCaster(const SimpleRayCaster& other);
+
+  SimpleRayCaster& operator=(const SimpleRayCaster& other);
+
   void initSimpleRayCaster(ros::NodeHandle& nh);
 
-  bool getVisibleVoxels(std::vector<cv::Point>* result,
+  bool getVisibleVoxels(std::vector<cv::Point2f>* result,
               const Eigen::Vector3d& position,
               const Eigen::Quaterniond& orientation,
-              const std::vector<cv::Point>& candidates);
+              const std::vector<cv::Point2f>& candidates);
 
   void getDirectionVector(Eigen::Vector3d* result, double relative_x,
                           double relative_y);
 
-  bool containingPoint(const std::vector<cv::Point>& points, const Eigen::Vector3d& point, cv::Point& result);
+  bool containingPoint(const std::vector<cv::Point2f>& points, const Eigen::Vector3d& point, cv::Point2f& result);
+
+  std::ofstream pointsFile_;
 
  protected:
 
@@ -41,6 +48,8 @@ class SimpleRayCaster{
   double p_focal_length_;
   int p_resolution_x_;
   int p_resolution_y_;
+
+  double epsilon_ = 0.0001;
     
 };
 

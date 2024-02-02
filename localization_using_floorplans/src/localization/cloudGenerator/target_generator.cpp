@@ -12,6 +12,16 @@ TargetGenerator::~TargetGenerator()
     // Destructor
 }
 
+TargetGenerator& TargetGenerator::operator=(const TargetGenerator& other)
+{
+    // Copy assignment
+    if(this != &other)
+    {
+        image_ = other.image_;
+    }
+    return *this;
+}
+
 void TargetGenerator::initTargetGenerator(ros::NodeHandle& nh)
 {
     // Initialize TargetGenerator
@@ -26,6 +36,15 @@ void TargetGenerator::initTargetGenerator(ros::NodeHandle& nh)
     computeContours();
     divideContours();
 
+    // Transform Points
+    for(int i = 0; i < candidate_points_.size(); i++)
+    {
+        candidate_points_[i].x = (candidate_points_[i].x * ((float)experiment_width_/image_width_) - 0.5f*experiment_width_);
+        candidate_points_[i].y = -(candidate_points_[i].y * ((float)experiment_height_/image_height_) - 0.5f*experiment_height_);
+
+        std::cout << "Candidate point: " << candidate_points_[i] << std::endl;
+    }
+
     // Initialize SimpleRayCaster
     raycaster_ = SimpleRayCaster();
     raycaster_.initSimpleRayCaster(nh);
@@ -38,20 +57,20 @@ void TargetGenerator::generateTargetCloud(Eigen::Vector3d position, Eigen::Quate
   
     
     std::cout << "Filter Points..." << std::endl;
-    std::vector<cv::Point> candidates = candidate_points_;
+    std::vector<cv::Point2f> candidates = candidate_points_;
     filterAccesiblePoints(candidates,position, orientation);
     candidate_points_ = candidates;
 
     std::cout << "Number of candidates: " << candidate_points_.size() << std::endl;
     pcl::PointCloud<pcl::PointXYZ>::Ptr targetCloud(new pcl::PointCloud<pcl::PointXYZ>);
 
-    for (const cv::Point& point : candidate_points_)
+    for (const cv::Point2f& point : candidate_points_)
     {
         cv::Point2f current_point = point;
 
-        // Transform points to experiment coordinates
-        current_point.x = current_point.x * ((double)experiment_width_/image_width_) - 0.5*experiment_width_;
-        current_point.y = current_point.y * ((double)experiment_height_/image_height_) - 0.5*experiment_height_;
+        // // Transform points to experiment coordinates
+        // current_point.x = current_point.x * ((double)experiment_width_/image_width_) - 0.5*experiment_width_;
+        // current_point.y = current_point.y * ((double)experiment_height_/image_height_) - 0.5*experiment_height_;
 
         pcl::PointXYZ pcl_point;
         pcl_point.x = static_cast<float>(current_point.x);
@@ -92,8 +111,8 @@ void TargetGenerator::computeContours()
 void TargetGenerator::divideContours()
 {
     //std::vector<cv::Point> candidatePoints;
-    cv::Point current_point;
-    cv::Point next_point;
+    cv::Point2f current_point;
+    cv::Point2f next_point;
 
     int num_contours = contours_.size();
     for(int i = 0; i < num_contours; i++)
@@ -101,6 +120,12 @@ void TargetGenerator::divideContours()
         int j = 0;
         for(j = 0; j < contours_[i].size() - 1; j++)
         {
+            // Transform points to experiment coordinates
+            // current_point.x = contours_[i][j].x * ((float)experiment_width_/image_width_) - 0.5f*experiment_width_;
+            // current_point.y = contours_[i][j].y * ((float)experiment_height_/image_height_) - 0.5f*experiment_height_;
+
+            // next_point.x = contours_[i][j+1].x * ((float)experiment_width_/image_width_) - 0.5f*experiment_width_;
+            // next_point.y = contours_[i][j+1].y * ((float)experiment_height_/image_height_) - 0.5f*experiment_height_;
 
             current_point = contours_[i][j];
             next_point = contours_[i][j+1];
@@ -117,8 +142,8 @@ void TargetGenerator::divideContours()
                 // Calculate the segment length
                 int segment_length = std::ceil(dist / num_segments);
 
-                cv::Point startPoint = current_point;
-                cv::Point diff = next_point - current_point;
+                cv::Point2f startPoint = current_point;
+                cv::Point2f diff = next_point - current_point;
 
                 candidate_points_.push_back(startPoint);
                 // Divide contour into segments of length l_max
@@ -137,6 +162,8 @@ void TargetGenerator::divideContours()
                 candidate_points_.push_back(current_point);
             } 
         }
+        //current_point.x = contours_[i][j].x * ((float)experiment_width_/image_width_) - 0.5f*experiment_width_;
+        //current_point.y = contours_[i][j].y * ((float)experiment_height_/image_height_) - 0.5f*experiment_height_;
         current_point = contours_[i][j];
         candidate_points_.push_back(current_point);
     }
@@ -144,7 +171,7 @@ void TargetGenerator::divideContours()
     //return candidatePoints;
 }
 
-void TargetGenerator::filterAccesiblePoints(const std::vector<cv::Point>& candidates, Eigen::Vector3d position, Eigen::Quaterniond orientation)
+void TargetGenerator::filterAccesiblePoints(const std::vector<cv::Point2f>& candidates, Eigen::Vector3d position, Eigen::Quaterniond orientation)
 {
     
     std::vector<cv::Point> accessiblePoints;
@@ -152,9 +179,11 @@ void TargetGenerator::filterAccesiblePoints(const std::vector<cv::Point>& candid
 
     // Generate a matrix of cv::Points of floorplan that lies within the FoV of the camera
 
+    std:: cout << "Number of FoV candidates: " << candidates.size() << std::endl;
+
     // Filter out points that are not in FoV
     // Camera Model: getVisibleVoxels()
-    std::vector<cv::Point> foVPoints;
+    std::vector<cv::Point2f> foVPoints;
     raycaster_.getVisibleVoxels(&foVPoints,position, orientation, candidates);
 
 
@@ -168,7 +197,7 @@ void TargetGenerator::filterAccesiblePoints(const std::vector<cv::Point>& candid
         std::cout << "A* star iteration:" << i << ", with points: " << foVPoints[i] << "&" << foVPoints[i + 1] << std::endl;
 
 
-        std::vector<cv::Point> path;
+        std::vector<cv::Point2f> path;
         bool success = aStar(foVPoints[i], foVPoints[i + 1], path);
         std::cout << "Success: " << success << std::endl;
         if(success)
@@ -183,25 +212,25 @@ void TargetGenerator::filterAccesiblePoints(const std::vector<cv::Point>& candid
     
 }
 
-double TargetGenerator::getDistance(cv::Point p1, cv::Point p2)
+double TargetGenerator::getDistance(cv::Point2f p1, cv::Point2f p2)
 {
     return std::sqrt(std::pow(p1.x - p2.x, 2) + std::pow(p1.y - p2.y, 2));
 }
 
-std::vector<cv::Point> TargetGenerator::getSegments()
+std::vector<cv::Point2f> TargetGenerator::getSegments()
 {
     return candidate_points_;
 }
 
 struct Node
 {
-    cv::Point point;
+    cv::Point2f point;
     double g;
     double h;
     double f;
     Node* parent;
 
-    Node(cv::Point p, double g, double h, double f, Node* parent)
+    Node(cv::Point2f p, double g, double h, double f, Node* parent)
     {
         this->point = p;
         this->g = g;
@@ -210,7 +239,7 @@ struct Node
         this->parent = parent;
     }
 
-    Node(cv::Point p)
+    Node(cv::Point2f p)
     {
         this->point = p;
         this->g = std::numeric_limits<double>::infinity();
@@ -242,14 +271,14 @@ struct GreaterNode
 
 struct PointHash
 {
-    std::size_t operator()(const cv::Point& p) const
+    float operator()(const cv::Point2f& p) const
     {
-        return std::hash<int>()(p.x) ^ std::hash<int>()(p.y);
+        return std::hash<float>()(p.x) ^ std::hash<float>()(p.y);
     }
 };
 
 
-bool TargetGenerator::aStar(cv::Point start, cv::Point goal, std::vector<cv::Point>& path)
+bool TargetGenerator::aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv::Point2f>& path)
 {
     // Boundaries
     int x_min = 0;
@@ -257,10 +286,13 @@ bool TargetGenerator::aStar(cv::Point start, cv::Point goal, std::vector<cv::Poi
     int y_min = 0;
     int y_max = image_height_;
 
+    // Resolution - voxel size
+    double resolution = 0.1;
+
     // Astar algorithm to find path from start to goal
     // Return true if path is found, false otherwise
     std::priority_queue<Node*,std::vector<Node*>,GreaterNode> openSet;
-    std::unordered_map<cv::Point, Node*,PointHash> closedSet;
+    std::unordered_map<cv::Point2f, Node*,PointHash> closedSet;
 
     // Create start node
     double h = getDistance(start, goal);
@@ -291,9 +323,9 @@ bool TargetGenerator::aStar(cv::Point start, cv::Point goal, std::vector<cv::Poi
         // Loop through neighbors
         int x = current->point.x;
         int y = current->point.y;
-        for(int i = x - 1; i <= x + 1; i++)
+        for(int i = x - 1; i <= x + 1; i += resolution)
         {
-            for(int j = y - 1; j <= y + 1; j++)
+            for(int j = y - 1; j <= y + 1; j += resolution)
             {
                 // Skip current node
                 if(i == x && j == y)
@@ -306,7 +338,7 @@ bool TargetGenerator::aStar(cv::Point start, cv::Point goal, std::vector<cv::Poi
                     continue;
                 }
 
-                cv::Point neighbor(i,j);
+                cv::Point2f neighbor(i,j);
                 
                 double tenetative_g = current->g + getDistance(current->point, neighbor);
                 if(!closedSet.count(neighbor) || tenetative_g < closedSet[neighbor]->g)

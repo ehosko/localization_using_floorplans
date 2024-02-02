@@ -6,6 +6,12 @@ SimpleRayCaster::SimpleRayCaster(double ray_length, double voxel_size)
 }
 
 
+SimpleRayCaster& SimpleRayCaster::operator=(const SimpleRayCaster& other)
+{
+    // Copy assignment
+    return *this;
+}
+
 void SimpleRayCaster::initSimpleRayCaster(ros::NodeHandle& nh)
 {
     // Initialize SimpleRayCaster
@@ -20,6 +26,8 @@ void SimpleRayCaster::initSimpleRayCaster(ros::NodeHandle& nh)
     double voxel_size = 0.01;
     nh.getParam("floorplan_node/voxel_size", voxel_size);
 
+    nh.getParam("floorplan_node/epsilon", epsilon_);
+
     // cache param dependent constants
     double c_field_of_view_x = 2.0 * atan2(p_resolution_x_, p_focal_length_ * 2.0);
     double c_field_of_view_y = 2.0 * atan2(p_resolution_y_, p_focal_length_ * 2.0);
@@ -32,12 +40,23 @@ void SimpleRayCaster::initSimpleRayCaster(ros::NodeHandle& nh)
       static_cast<int>(ceil(p_ray_length_ * c_field_of_view_y /
                             (voxel_size * p_downsampling_factor_))),
       p_resolution_y_);
+
+    std::string filename = "/home/michbaum/Projects/optag_EH/data/floorplan/points.txt";
+    pointsFile_.open(filename);
+    if(!pointsFile_.is_open())
+    {
+        std::cout << "Error opening file" << std::endl;
+    }
+    else
+    {
+        pointsFile_ << "x y z" << std::endl;
+    }
 }
 
-bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point>* result,
+bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point2f>* result,
                                        const Eigen::Vector3d& position,
                                        const Eigen::Quaterniond& orientation,
-                                       const std::vector<cv::Point>& candidates)
+                                       const std::vector<cv::Point2f>& candidates)
 {
     // Naive ray-casting
     Eigen::Vector3d camera_direction;
@@ -45,8 +64,9 @@ bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point>* result,
     Eigen::Vector3d current_position;
     Eigen::Vector3d voxel_center;
 
-    cv::Point observed_point;
+    cv::Point2f observed_point;
 
+    # pragma omp parallel
     for (int i = 0; i < c_res_x_; ++i) {
         for (int j = 0; j < c_res_y_; ++j) {
         getDirectionVector(
@@ -61,7 +81,12 @@ bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point>* result,
 
             // Check voxel occupied
             if (containingPoint(candidates, Eigen::Vector3d(current_position.x(), current_position.y(),0), observed_point)){
-                result->push_back(observed_point);
+                if (std::find(result->begin(), result->end(), observed_point) == result->end() ){
+                    pointsFile_ << observed_point.x << " " << observed_point.y << " " << 0 << std::endl;
+                    result->push_back(observed_point);
+                }
+                    
+                //result->push_back(observed_point);
                 break;
             }
 
@@ -70,6 +95,7 @@ bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point>* result,
         }
         }
     }
+    pointsFile_.close();
     return true;
 }
 
@@ -82,11 +108,14 @@ void SimpleRayCaster::getDirectionVector(Eigen::Vector3d* result, double relativ
           .normalized();
 }
 
-bool SimpleRayCaster::containingPoint(const std::vector<cv::Point>& points, const Eigen::Vector3d& point, cv::Point& result)
+bool SimpleRayCaster::containingPoint(const std::vector<cv::Point2f>& points, const Eigen::Vector3d& point, cv::Point2f& result)
 {
+    // Check if point is contained in vector of points
+    //double epsilon = 0.001;
+
     for(int i = 0; i < points.size(); i++)
     {
-        if(points[i].x == point.x() && points[i].y == point.y())
+        if(std::abs(points[i].x - point.x()) <= epsilon_ && std::abs(points[i].y - point.y()) <= epsilon_)
         {
             result = points[i];
             return true;

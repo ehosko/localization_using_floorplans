@@ -1,7 +1,7 @@
 <launch>
 
     <node name="floorplan_node" pkg="localization_using_floorplans" type="ros_localization_node" output="screen">
-        <param name="floorplan_path" value="/data/floorplan_1.png"/>
+        <param name="floorplan_path" value="/home/michbaum/Projects/optag_EH/data/floorplan/MazeOccupancyMap.png"/>
         <param name="floorplan_resolution" value="0.1"/>
         <param name="floorplan_height" value="40"/>
         <param name="floorplan_width" value="40"/>
@@ -17,12 +17,15 @@
         <param name="voxel_size" value="0.01"/>
         <param name="ray_step" value="0.01"/>
         <param name="downsampling_factor" value="1.0"/>
+        <param name="epsilon" value="0.001"/>
 
 
-        <param name="max_segment_length" value="20"/>
+        <param name="l_max" value="20"/>
 
         <param name="d_l" value="0.3"/>
         <param name="theta_l" value="0.26"/>
+
+        <param name="log_file" value="/home/michbaum/Projects/optag_EH/data/floorplan/transformation.txt"/>
 
     </node>
 

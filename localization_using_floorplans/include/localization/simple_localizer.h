@@ -38,6 +38,8 @@ class SimpleLocalizer
 
         void publishTransformation();
 
+        std::ofstream transformationFile_;
+
     protected:
         ::ros::NodeHandle nh_;
         ::ros::Subscriber odomSub_;
@@ -57,6 +59,7 @@ class SimpleLocalizer
 
         Eigen::Matrix4d transformationMatrix_;
 
+    
 };
 
 

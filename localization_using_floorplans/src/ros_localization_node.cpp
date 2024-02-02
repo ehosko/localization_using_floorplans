@@ -15,5 +15,6 @@ int main(int argc, char** argv)
 
     ros::spin();
 
+    simple_localizer.transformationFile_.close();
     return 0;
 }

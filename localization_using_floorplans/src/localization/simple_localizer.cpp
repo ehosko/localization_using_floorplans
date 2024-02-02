@@ -15,7 +15,6 @@ SimpleLocalizer::~SimpleLocalizer()
 
 void SimpleLocalizer::setupFromParam()
 {
-    // TODO implement
     std::string floorplan_path;
     double ray_length;
 
@@ -26,13 +25,17 @@ void SimpleLocalizer::setupFromParam()
     nh_.getParam("floorplan_node/d_l", d_l_);
     nh_.getParam("floorplan_node/theta_l", theta_l_);
 
+    std::string filename;
+    nh_.getParam("floorplan_node/log_file", filename);
+
     sourceGenerator_ = SourceGenerator();
     targetGenerator_ = TargetGenerator(floorplan_path);
     targetGenerator_.initTargetGenerator(nh_);
 
+    position_ = Eigen::Vector3d(0, 0, 0);
+    orientation_ = Eigen::Quaterniond(1, 0, 0, 0);
 
     std::cout << "Floorplan path: " << floorplan_path << std::endl;
-    std::cout << "Ray length: " << ray_length << std::endl;
 
     // Set up subscribers
     odomSub_ = nh_.subscribe("/rovioli/odom_T_M_I", 1, &SimpleLocalizer::odomCallback, this);
@@ -40,6 +43,19 @@ void SimpleLocalizer::setupFromParam()
 
     // Set up publishers for transformation
     //transformationPub_ = nh_.advertise<geometry_msgs::TransformStamped>("/floorplan/transformation", 1);
+
+    // Set up logging file
+    transformationFile_.open(filename);
+    if(!transformationFile_.is_open())
+    {
+        std::cout << "Error opening file" << std::endl;
+    }
+    else
+    {
+        transformationFile_ << "x y z qx qy qz qw" << std::endl;
+    }
+
+    ros::spin();
 
 }
 
@@ -88,6 +104,9 @@ void SimpleLocalizer::publishTransformation()
     transformStamped.transform.rotation.w = quaternion.w();
 
     broadcaster.sendTransform(transformStamped);
+
+    transformationFile_ << transformationMatrix_(0, 3) << " " << transformationMatrix_(1, 3) << " " << transformationMatrix_(2, 3) << " " 
+                        << quaternion.x() << " " << quaternion.y() << " " << quaternion.z() << " " << quaternion.w() << std::endl;
 }
 
 void SimpleLocalizer::localize()
@@ -108,20 +127,21 @@ void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
     double position_delta = (position - position_).norm();
     double rotation_delta = (orientation.inverse() * orientation_).vec().norm();
 
-    position_ = position;
-    orientation_ = orientation;
-
     if (position_delta > d_l_|| rotation_delta > theta_l_)
     {
         std::cout << "Odometry changed enough to update the position" << std::endl;
+        std::cout << "Position: " << position << std::endl;
         // Here update the position
+        position_ = position;
+        orientation_ = orientation;
         // Here generate the source cloud
         targetGenerator_.generateTargetCloud(position_, orientation_);
         sourceGenerator_.ProjectOnFloor(depthCloud_, orientation_);
         // Here compute the transformation matrix
         int hasConverged = computeTransformationGICP(sourceGenerator_._sourceCloud, targetGenerator_._targetCloud, transformationMatrix_);
         //std::cout << "Transformation matrix: " << std::endl << transformationMatrix << std::endl;
-        std::cout << "Has converged: " << hasConverged << std::endl;
+        //std::cout << "Has converged: " << hasConverged << std::endl;
+        ROS_INFO("\n******************** Has converged:  %d ********************\n", hasConverged);
 
         if(hasConverged){
             publishTransformation();

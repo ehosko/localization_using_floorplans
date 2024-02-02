@@ -16,12 +16,14 @@ class TargetGenerator
         TargetGenerator(std::string image_path) : image_(cv::imread(image_path)) {} // Constructor
         ~TargetGenerator(); // Destructor
 
+        TargetGenerator& operator=(const TargetGenerator& other); // Copy assignment
+
         void initTargetGenerator(ros::NodeHandle& nh);
 
         void generateTargetCloud(Eigen::Vector3d position, Eigen::Quaterniond orientation);
         std::vector<std::vector<cv::Point>> getContours(){return contours_;};
-        std::vector<cv::Point> getSegments();
-        bool aStar(cv::Point, cv::Point, std::vector<cv::Point>&);
+        std::vector<cv::Point2f> getSegments();
+        bool aStar(cv::Point2f, cv::Point2f, std::vector<cv::Point2f>&);
 
         //Public Member
         pcl::PointCloud<pcl::PointXYZ> _targetCloud;
@@ -29,8 +31,8 @@ class TargetGenerator
     private:
         void computeContours();
         void divideContours();
-        void filterAccesiblePoints(const std::vector<cv::Point>&,Eigen::Vector3d position, Eigen::Quaterniond orientation);
-        double getDistance(cv::Point, cv::Point);
+        void filterAccesiblePoints(const std::vector<cv::Point2f>&,Eigen::Vector3d position, Eigen::Quaterniond orientation);
+        double getDistance(cv::Point2f, cv::Point2f);
         
 
         //Parameters
@@ -43,7 +45,7 @@ class TargetGenerator
         int experiment_height_ = 0; //Floorplan height
 
         std::vector<std::vector<cv::Point>> contours_; //Contours
-        std::vector<cv::Point> candidate_points_; //Contours
+        std::vector<cv::Point2f> candidate_points_; //Contours
         int l_max_ = 20; //Max length of segment
         //PCL Point Cloud
 
