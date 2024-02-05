@@ -30,8 +30,15 @@ void TargetGenerator::initTargetGenerator(ros::NodeHandle& nh)
     nh.getParam("floorplan_node/floorplan_width", experiment_width_);
     nh.getParam("floorplan_node/floorplan_height", experiment_height_);
 
-    image_height_ = image_.rows;
-    image_width_ = image_.cols;
+    nh.getParam("floorplan_node/voxel_size", resolution_);
+
+    // image_height_ = image_.rows;
+    // image_width_ = image_.cols;
+
+    image_height_ = experiment_height_ / resolution_;
+    image_width_ = experiment_width_ / resolution_;
+
+    std::cout << "Image size: " << image_width_ << "x" << image_height_ << std::endl;
 
     computeContours();
     divideContours();
@@ -101,6 +108,8 @@ void TargetGenerator::generateTargetCloud(Eigen::Vector3d position, Eigen::Quate
 
 void TargetGenerator::computeContours()
 {
+    cv::resize(image_, image_, cv::Size(image_width_, image_height_));
+
     // Convert the image to grayscale
     cv::Mat imgray;
     cv::cvtColor(image_, imgray, cv::COLOR_BGR2GRAY);
@@ -199,6 +208,13 @@ void TargetGenerator::filterAccesiblePoints(std::vector<cv::Point2f>& accessible
     double y_min = boundaries[2];
     double y_max = boundaries[3];
 
+    for(int i = 0; i < foVPoints.size(); i++)
+    {
+        std::cout << "FoV point: " << foVPoints[i] << std::endl;
+    }
+
+    std::cout << "x_min: " << x_min << ", x_max: " << x_max << ", y_min: " << y_min << ", y_max: " << y_max << std::endl;
+
     // std:: cout << "Number of candidates: " << candidates.size() << std::endl;
     // std::vector<cv::Point> foVPoints(&candidates[0], &candidates[0] + candidates.size() / 10);
     std:: cout << "Number of FoV candidates: " << foVPoints.size() << std::endl;
@@ -231,6 +247,8 @@ void TargetGenerator::filterAccesiblePoints(std::vector<cv::Point2f>& accessible
     
     }
     
+    //accessiblePoints = foVPoints;
+
 }
 
 void TargetGenerator::cleanTargetCloud()
@@ -279,14 +297,16 @@ struct Node
 
     bool traversable(const std::vector<cv::Point2f>& segments,double eps = 0.1)
     {
-        // Check if point is traversable
-        for(int i = 0; i < segments.size(); i++)
-        {
-            if(std::abs(segments[i].x - point.x) <= eps && std::abs(segments[i].y - point.y) <= eps)
-            {
-                return false;
-            }
-        }
+        // // Check if point is traversable
+        // for(int i = 0; i < segments.size(); i++)
+        // {
+        //     if(std::abs(segments[i].x - point.x) <= eps && std::abs(segments[i].y - point.y) <= eps)
+        //     {
+        //         return false;
+        //     }
+        // }
+        // return true;
+
         return true;
     }
 };
@@ -318,8 +338,8 @@ bool TargetGenerator::aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv:
     // int y_max = image_height_;
 
     // Resolution - voxel size
-    double resolution = 0.1;
-    double epsilon = 0.1;   // Epsilon for traversability
+    //double resolution = 0.1;
+    double epsilon = 0.01;   // Epsilon for traversability
 
     // Astar algorithm to find path from start to goal
     // Return true if path is found, false otherwise
@@ -341,7 +361,7 @@ bool TargetGenerator::aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv:
         openSet.pop();
 
         // Check if current node is goal
-        if(current->point == goal)
+        if(std::abs((current->point).x - goal.x) < epsilon && std::abs((current->point).y - goal.y) < epsilon)
         {
             // Reconstruct path
             while(current != nullptr)
@@ -353,14 +373,16 @@ bool TargetGenerator::aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv:
         }
 
         // Loop through neighbors
-        int x = current->point.x;
-        int y = current->point.y;
-        for(int i = x - resolution; i <= x + 1; i += resolution)
+        double x = current->point.x;
+        double y = current->point.y;
+        for(double i = x - resolution_; i <= x + resolution_; i += resolution_)
         {
-            for(int j = y - resolution; j <= y + 1; j += resolution)
+            for(double j = y - resolution_; j <= y + resolution_; j += resolution_)
             {
+                //std::cout << "Neighbor: " << i << "," << j << std::endl;
+
                 // Skip current node
-                if(i == x && j == y)
+                if(std::abs(x-i) < std::numeric_limits<double>::epsilon() && std::abs(y-j) < std::numeric_limits<double>::epsilon())
                 {
                     continue;
                 }
@@ -373,17 +395,21 @@ bool TargetGenerator::aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv:
                 cv::Point2f neighbor(i,j);
                 
                 double tenetative_g = current->g + getDistance(current->point, neighbor);
-                if(!closedSet.count(neighbor) || tenetative_g < closedSet[neighbor]->g)
+                double tenetative_h = getDistance(neighbor, goal);
+                double tenetative_f = tenetative_g + tenetative_h;
+                if(!closedSet.count(neighbor) || tenetative_f < closedSet[neighbor]->f)
                 {
                     // Create new node
-                    double h = getDistance(neighbor, goal);
-                    Node* neighborNode = new Node(neighbor, tenetative_g, h, tenetative_g + h, current);
+                    //double h = getDistance(neighbor, goal);
+                    Node* neighborNode = new Node(neighbor, tenetative_g, tenetative_h, tenetative_f, current);
 
                     // Check if neighbor is traversable
                     if(neighborNode->traversable(segments_,epsilon))
                     {
                         openSet.push(neighborNode);
                         closedSet[neighbor] = neighborNode;
+
+                        //std::cout << "Pushed Neighbor: " << i << "," << j << std::endl;
                     }
                 }
             }

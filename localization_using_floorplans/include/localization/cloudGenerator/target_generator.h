@@ -51,8 +51,10 @@ class TargetGenerator
 
         std::vector<cv::Point2f> candidate_points_; //Candidate points
         
-        int l_max_ = 20; //Max length of segment
+        int l_max_ = 2; //Max length of segment
         //PCL Point Cloud
+
+        double resolution_ = 0.1; //Resolution of the floorplan
 
         SimpleRayCaster raycaster_;
 
