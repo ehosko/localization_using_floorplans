@@ -17,6 +17,7 @@ cs_add_library(${PROJECT_NAME}
         src/localization/cloudGenerator/source_generator.cpp
         src/localization/cloudGenerator/target_generator.cpp
         src/localization/utils/simple_ray_caster.cpp
+        src/referenceTrajectory/floorplan_graph.cpp
         )
 
 ############

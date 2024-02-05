@@ -14,6 +14,13 @@ void SourceGenerator::ProjectOnFloor(pcl::PointCloud<pcl::PointXYZ> depthCloud,E
 {
     // Project depth cloud on floor
     std::cout << "Projecting depth cloud on floor..." << std::endl;
+
+    for(int i = 0; i < 5; i++)
+    {
+        std::cout << "Depth cloud point " << i << " x: " << depthCloud.points[i].x << "  y: " << depthCloud.points[i].y << "  z: " << depthCloud.points[i].z<< std::endl;
+
+        std::cout << "Depth cloud point " << depthCloud.width - i -1 << " x: " << depthCloud.points[depthCloud.width - i -1].x << "  y: " << depthCloud.points[depthCloud.width - i -1].y << "  z: " << depthCloud.points[depthCloud.width - i -1].z<< std::endl;
+    }
     
     // Compute normal vector of floor
     Eigen::Matrix3d rotationMatrix = q.normalized().toRotationMatrix();

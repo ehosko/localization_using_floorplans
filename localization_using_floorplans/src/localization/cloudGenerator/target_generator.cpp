@@ -404,13 +404,13 @@ bool TargetGenerator::aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv:
                     Node* neighborNode = new Node(neighbor, tenetative_g, tenetative_h, tenetative_f, current);
 
                     // Check if neighbor is traversable
-                    if(neighborNode->traversable(segments_,epsilon))
-                    {
-                        openSet.push(neighborNode);
-                        closedSet[neighbor] = neighborNode;
+                    // if(neighborNode->traversable(segments_,epsilon))
+                    // {
+                    openSet.push(neighborNode);
+                    closedSet[neighbor] = neighborNode;
 
                         //std::cout << "Pushed Neighbor: " << i << "," << j << std::endl;
-                    }
+                    // }
                 }
             }
         }

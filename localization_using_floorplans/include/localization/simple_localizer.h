@@ -5,6 +5,8 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <sensor_msgs/PointCloud2.h>
 #include <Eigen/Geometry>
@@ -21,7 +23,7 @@ class SimpleLocalizer
 {
     public:
         SimpleLocalizer(); // Constructor
-        SimpleLocalizer(const ::ros::NodeHandle& nh) : nh_(nh) {} // Constructor
+        SimpleLocalizer(const ::ros::NodeHandle& nh) : nh_(nh), tfListener_(tfBuffer_) {} // Constructor
         ~SimpleLocalizer(); // Destructor
 
         void localize();
@@ -44,7 +46,10 @@ class SimpleLocalizer
         ::ros::NodeHandle nh_;
         ::ros::Subscriber odomSub_;
         ::ros::Subscriber cloudSub_;
-        tf2_ros::TransformBroadcaster broadcaster;
+        
+        tf2_ros::Buffer tfBuffer_;
+        tf2_ros::TransformListener tfListener_;
+        tf2_ros::TransformBroadcaster broadcaster_;
 
         SourceGenerator sourceGenerator_;
         TargetGenerator targetGenerator_;

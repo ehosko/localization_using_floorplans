@@ -3,7 +3,7 @@
 // #include "../../include/localization/cloudGenerator/target_generator.h"
 
 
-SimpleLocalizer::SimpleLocalizer()
+SimpleLocalizer::SimpleLocalizer() : tfListener_(tfBuffer_)
 {
     // Constructor
 }
@@ -90,8 +90,8 @@ void SimpleLocalizer::publishTransformation()
 
     geometry_msgs::TransformStamped transformStamped;
     transformStamped.header.stamp = ros::Time::now();
-    transformStamped.header.frame_id = "floorplan";
-    transformStamped.child_frame_id = "odom";
+    transformStamped.header.frame_id = "world";
+    transformStamped.child_frame_id = "floorplan";
     
     Eigen::Quaterniond quaternion(transformationMatrix_.block<3, 3>(0, 0));
     
@@ -103,10 +103,10 @@ void SimpleLocalizer::publishTransformation()
     transformStamped.transform.rotation.z = quaternion.z();
     transformStamped.transform.rotation.w = quaternion.w();
 
-    broadcaster.sendTransform(transformStamped);
+    broadcaster_.sendTransform(transformStamped);
 
-    transformationFile_ << transformationMatrix_(0, 3) << " " << transformationMatrix_(1, 3) << " " << transformationMatrix_(2, 3) << " " 
-                        << quaternion.x() << " " << quaternion.y() << " " << quaternion.z() << " " << quaternion.w() << std::endl;
+    // transformationFile_ << transformationMatrix_(0, 3) << " " << transformationMatrix_(1, 3) << " " << transformationMatrix_(2, 3) << " " 
+    //                     << quaternion.x() << " " << quaternion.y() << " " << quaternion.z() << " " << quaternion.w() << std::endl;
 }
 
 void SimpleLocalizer::localize()
@@ -135,8 +135,8 @@ void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
         position_ = position;
         orientation_ = orientation;
         // Here generate the source cloud
-        targetGenerator_.generateTargetCloud(position_, orientation_);
         sourceGenerator_.ProjectOnFloor(depthCloud_, orientation_);
+        targetGenerator_.generateTargetCloud(position_, orientation_);
 
         if(sourceGenerator_._sourceCloud.size() > 0 && targetGenerator_._targetCloud.size() > 0)
         {
@@ -167,6 +167,25 @@ void SimpleLocalizer::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
     // Here only save the current cloud
     pcl::fromROSMsg(*msg, depthCloud_);
+
+    // Get the transformation from the camera frame to the floorplan frame
+
+
+    // Transform coordinates to the floorplan frame
+    // try{
+    //     std::string frames = tfBuffer_.allFramesAsString();
+    //     std::cout << frames << std::endl;
+
+    //     geometry_msgs::TransformStamped gt_transform = tfBuffer_.lookupTransform("world",msg->header.frame_id,
+    //                                msg->header.stamp);
+    //     transformationFile_ << gt_transform.transform.translation.x << " " << gt_transform.transform.translation.y << " " << gt_transform.transform.translation.z << " " 
+    //                     << gt_transform.transform.rotation.x << " " << gt_transform.transform.rotation.y << " " << gt_transform.transform.rotation.z << " " << gt_transform.transform.rotation.w << std::endl;
+    // }
+    // catch (tf2::TransformException &ex) {
+    //     ROS_WARN("%s",ex.what());
+    // }
+  
+
 }
 
 
