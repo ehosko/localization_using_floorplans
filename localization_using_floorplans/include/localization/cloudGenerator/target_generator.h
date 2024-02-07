@@ -8,6 +8,8 @@
 #include <ros/ros.h>
 
 #include "../utils/simple_ray_caster.h"
+#include "../utils/process_point_cloud.h"
+#include "../utils/aStar.h"
 
 class TargetGenerator
 {
@@ -23,7 +25,7 @@ class TargetGenerator
         void generateTargetCloud(Eigen::Vector3d position, Eigen::Quaterniond orientation);
         std::vector<std::vector<cv::Point>> getContours(){return contours_;};
         std::vector<cv::Point2f> getSegments();
-        bool aStar(cv::Point2f, cv::Point2f, std::vector<cv::Point2f>&,double x_min, double x_max, double y_min, double y_max);
+      
 
         void cleanTargetCloud();
 

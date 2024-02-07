@@ -28,6 +28,8 @@ void FloorplanGraph::initFloorplanGraph(ros::NodeHandle& nh)
 
     nh.getParam("floorplan_node/skip_distance", skip_distance_);
 
+    nh.getParam("floorplan_node/concorde_executable", concorde_executable_);
+
     image_height_ = experiment_height_ / resolution_;
     image_width_ = experiment_width_ / resolution_;
 
@@ -52,6 +54,8 @@ bool FloorplanGraph::neighborsOccupied(int i, int j, int radius)
 
 void FloorplanGraph::buildGraph()
 {
+    ROS_INFO("\n******************** Started Building Graph ********************\n");
+
     cv::resize(map_, map_, cv::Size(image_width_, image_height_));
 
     // Convert the image to grayscale
@@ -107,6 +111,7 @@ void FloorplanGraph::buildGraph()
 
     std::cout << "Number of nodes: " << nodes_.size() << std::endl;
 
+    // TODO: (ehosko) Matrix is symmetric, so we can optimize this
     weightedEdgeMatrix_ = Eigen::MatrixXd::Zero(nodes_.size(), nodes_.size());
     for(int k = 0; k < nodes_.size(); k++)
     {
@@ -120,13 +125,29 @@ void FloorplanGraph::buildGraph()
                     weightedEdgeMatrix_(k,l) = aStar(nodes_[k], nodes_[l]);
                     std::cout << "Distance: " << weightedEdgeMatrix_(k,l) << std::endl;
                 }
-                else
-                    weightedEdgeMatrix_(k,l) = -1;
+                else{
+                    weightedEdgeMatrix_(k,l) = 1000;
+                }
+
             }
         }
     }
 
     std::cout << "Weighted Edge Matrix: " << weightedEdgeMatrix_ << std::endl;
+
+
+    // Solve TSP problem
+    std::vector<int> tour;
+    TSPSolver tspSolver(concorde_executable_);
+    tspSolver.initTSPSolver(weightedEdgeMatrix_);
+
+    tspSolver.solveTSP(tour);
+
+    std::cout << "Tour: " << std::endl;
+    for(int i = 0; i < tour.size(); i++)
+    {
+        std::cout << tour[i] << " ";
+    }
 }
 
 std::pair<double,double> FloorplanGraph::transformCoordinate(int i, int j)

@@ -8,6 +8,8 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "tsp_solver.h"
+
 struct Node
 {
     double x;
@@ -50,6 +52,8 @@ private:
     double resolution_ = 0.1; //Resolution of the floorplan
 
     double threshold_ = 5;
+
+    std::string concorde_executable_;
 
     cv::Mat map_;
     Eigen::MatrixXi occupancyGrid_;

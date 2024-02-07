@@ -15,7 +15,7 @@ int main(int argc, char** argv)
 
     // SimpleLocalizer simple_localizer(nh);
     // simple_localizer.setupFromParam();
-    // //simple_localizer.localize();
+    //simple_localizer.localize();
 
     ros::spin();
 

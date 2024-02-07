@@ -28,7 +28,9 @@
 
         <param name="num_samples" value="50"/>
         <param name="threshold" value="5"/>
-        <param name="skip_distance" value="0"/>
+        <param name="skip_distance" value="5"/>
+
+        <param name="concorde_executable" value="/home/michbaum/Projects/concorde/TSP/concorde"/>
 
     </node>
 

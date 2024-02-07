@@ -17,7 +17,10 @@ cs_add_library(${PROJECT_NAME}
         src/localization/cloudGenerator/source_generator.cpp
         src/localization/cloudGenerator/target_generator.cpp
         src/localization/utils/simple_ray_caster.cpp
+        src/localization/utils/process_point_cloud.cpp
+        src/localization/utils/aStar.cpp
         src/referenceTrajectory/floorplan_graph.cpp
+        src/referenceTrajectory/tsp_solver.cpp
         )
 
 ############
