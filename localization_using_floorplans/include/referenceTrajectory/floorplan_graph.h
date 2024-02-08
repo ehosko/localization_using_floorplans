@@ -53,7 +53,7 @@ private:
 
     double threshold_ = 5;
 
-    std::string concorde_executable_;
+    std::string lkh_executable_;
 
     cv::Mat map_;
     Eigen::MatrixXi occupancyGrid_;

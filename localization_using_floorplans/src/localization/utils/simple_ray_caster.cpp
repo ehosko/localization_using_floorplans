@@ -123,6 +123,7 @@ bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point2f>* result,
     return true;
 }
 
+
 void SimpleRayCaster::getDirectionVector(Eigen::Vector3d* result, double relative_x,
                                      double relative_y) {
   *result =

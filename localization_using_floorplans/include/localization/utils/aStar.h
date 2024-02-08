@@ -8,7 +8,7 @@
 #include <vector>
 #include <unordered_map>
 
-bool aStar(cv::Point2f, cv::Point2f, std::vector<cv::Point2f>&,double x_min, double x_max, double y_min, double y_max, double resolution);
+bool aStar(cv::Point2f, cv::Point2f, std::vector<cv::Point2f>&,std::vector<cv::Point2f> segments,double x_min, double x_max, double y_min, double y_max, double resolution);
 
 double getDistance(cv::Point2f, cv::Point2f);
 

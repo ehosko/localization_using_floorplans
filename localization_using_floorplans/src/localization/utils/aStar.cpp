@@ -28,9 +28,9 @@ struct Node
         this->parent = nullptr;
     }
 
-    bool traversable(const std::vector<cv::Point2f>& segments,double eps = 0.1)
+    bool traversable(const std::vector<cv::Point2f>& segments,double eps = 0.05)
     {
-        // // Check if point is traversable
+        // Check if point is traversable
         // for(int i = 0; i < segments.size(); i++)
         // {
         //     if(std::abs(segments[i].x - point.x) <= eps && std::abs(segments[i].y - point.y) <= eps)
@@ -38,8 +38,6 @@ struct Node
         //         return false;
         //     }
         // }
-        // return true;
-
         return true;
     }
 };
@@ -67,7 +65,7 @@ double getDistance(cv::Point2f p1, cv::Point2f p2){
 }
 
 
-bool aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv::Point2f>& path,double x_min, double x_max, double y_min, double y_max,double resolution)
+bool aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv::Point2f>& path, std::vector<cv::Point2f> segments,double x_min, double x_max, double y_min, double y_max,double resolution)
 {
     // Boundaries
     // int x_min = 0;
@@ -142,13 +140,13 @@ bool aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv::Point2f>& path,d
                     Node* neighborNode = new Node(neighbor, tenetative_g, tenetative_h, tenetative_f, current);
 
                     // Check if neighbor is traversable
-                    // if(neighborNode->traversable(segments_,epsilon))
-                    // {
-                    openSet.push(neighborNode);
-                    closedSet[neighbor] = neighborNode;
+                    if(neighborNode->traversable(segments))
+                    {
+                        openSet.push(neighborNode);
+                        closedSet[neighbor] = neighborNode;
 
                         //std::cout << "Pushed Neighbor: " << i << "," << j << std::endl;
-                    // }
+                    }
                 }
             }
         }

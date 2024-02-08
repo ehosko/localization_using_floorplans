@@ -21,6 +21,8 @@ class SourceGenerator
 
         void generateSourceCloud(pcl::PointCloud<pcl::PointXYZ> depthCloud, Eigen::Quaterniond q);
 
+        void projectPosOnFloor(Eigen::Vector3d position, Eigen::Quaterniond orientation);
+
         pcl::PointCloud<pcl::PointXYZ> _sourceCloud;
 
         void cleanSourceCloud();
@@ -32,9 +34,6 @@ class SourceGenerator
         void transformCallback(const geometry_msgs::TransformStamped& transform_msg);
 
         void ProjectOnFloor(pcl::PointCloud<pcl::PointXYZ> depthCloud,pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloud, Eigen::Quaterniond q);
-        void RemoveOutliers();
-        void RemoveOutliersPlaneInformation();
-        void RemoveOutliersGICP();
 
         Eigen::Transform<double, 3, Eigen::Affine> transform_;
         Eigen::Transform<double, 3, Eigen::Affine> T_B_C_;

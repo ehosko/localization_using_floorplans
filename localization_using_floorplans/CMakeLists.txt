@@ -4,6 +4,9 @@ project(localization_using_floorplans)
 find_package(catkin_simple REQUIRED)
 catkin_simple(ALL_DEPS_REQUIRED)
 
+# set(CMAKE_PREFIX_PATH="/home/michbaum/Projects/ortools/")
+# find_package(ortools CONFIG REQUIRED)
+
 add_definitions(-std=c++14)
 
 catkin_package()

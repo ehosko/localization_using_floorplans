@@ -15,16 +15,22 @@ void TSPSolver::initTSPSolver(Eigen::MatrixXd weightedAdjacenyMatrix)
 {
     tsp_file_ = "problem.tsp";
     tsp_tour_ = "problem.tour";
+    tsp_params_ = "problem.par";
+
+    std::ofstream file(tsp_params_);
+    file << "PROBLEM_FILE = " << tsp_file_ << std::endl;
+    file << "OUTPUT_TOUR_FILE = " << tsp_tour_ << std::endl;
 
     CreateTSPFile(weightedAdjacenyMatrix);
 }
 
-void TSPSolver::solveTSP(std::vector<int>& path)
+void TSPSolver::solveTSP(std::vector<int>* path,int start)
 {
-    std::string command = concorde_executable_ + " -x -w -o " + tsp_tour_ + " " + tsp_file_;
+    std::string command = lkh_executable_ + " " + tsp_params_;
     system(command.c_str());
 
-    ReadTourFile();
+    ReadTourFile(path);
+    rotatePath(path, start);
 }
 
 void TSPSolver::CreateTSPFile(Eigen::MatrixXd weightedAdjacenyMatrix)
@@ -41,7 +47,7 @@ void TSPSolver::CreateTSPFile(Eigen::MatrixXd weightedAdjacenyMatrix)
     {
         for(int j = 0; j < weightedAdjacenyMatrix.cols(); j++)
         {
-            file << weightedAdjacenyMatrix(i,j) << " ";
+            file << (int)(weightedAdjacenyMatrix(i,j) * 100) << " ";
         }
         file << std::endl;
     }
@@ -49,38 +55,33 @@ void TSPSolver::CreateTSPFile(Eigen::MatrixXd weightedAdjacenyMatrix)
     file.close();
 }
 
-void TSPSolver::ReadTourFile()
+void TSPSolver::ReadTourFile(std::vector<int>* path)
 {
     std::ifstream file(tsp_tour_);
     std::string line;
     std::string tour;
 
-    // Second line stores the path
-    std::getline(file, line);
-    std::getline(file, line);
-    tour = line;
-    // while(std::getline(file, line))
-    // {
-    //     if(line.find("TOUR_SECTION") != std::string::npos)
-    //     {
-    //         std::getline(file, line);
-    //         tour = line;
-    //     }
-    // }
+    while(std::getline(file, line))
+    {
+        if(line.find("TOUR_SECTION") != std::string::npos)
+        {
+            std::getline(file, line);
+            tour = line;
+
+            while(line.find("-1") == std::string::npos)
+            {
+                std::getline(file, line);
+
+                path->push_back(std::stoi(line, nullptr, 10));
+            }
+        }
+    }
     file.close();
 
-    std::vector<int> path;
-    std::stringstream ss(tour);
-    int i;
-    while(ss >> i)
-    {
-        path.push_back(i);
-        if(ss.peek() == ',')
-            ss.ignore();
-    }
+
 }
 
-void TSPSolver::rotatePath(std::vector<int>& path, int start){
-    std::rotate(path.begin(), path.begin() + start, path.end());
+void TSPSolver::rotatePath(std::vector<int>* path, int start){
+    std::rotate(path->begin(), path->begin() + start, path->end());
 }
 

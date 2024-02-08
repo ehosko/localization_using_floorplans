@@ -233,7 +233,7 @@ void TargetGenerator::filterAccesiblePoints(std::vector<cv::Point2f>& accessible
 
 
         std::vector<cv::Point2f> path;
-        bool success = aStar(foVPoints[i], foVPoints[i + 1], path,x_min, x_max, y_min, y_max, resolution_);
+        bool success = aStar(foVPoints[i], foVPoints[i + 1], path,segments_,x_min, x_max, y_min, y_max, resolution_);
         std::cout << "Success: " << success << std::endl;
         if(success)
         {

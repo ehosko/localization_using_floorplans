@@ -28,7 +28,7 @@ void FloorplanGraph::initFloorplanGraph(ros::NodeHandle& nh)
 
     nh.getParam("floorplan_node/skip_distance", skip_distance_);
 
-    nh.getParam("floorplan_node/concorde_executable", concorde_executable_);
+    nh.getParam("floorplan_node/lkh_executable", lkh_executable_);
 
     image_height_ = experiment_height_ / resolution_;
     image_width_ = experiment_width_ / resolution_;
@@ -109,6 +109,11 @@ void FloorplanGraph::buildGraph()
         } 
     }
 
+    // Add starting node
+    std::pair<double,double> start_point = transformCoordinate(0, 0);
+    Node start_node = {start_point.first, start_point.second, 0, 0};
+    nodes_.push_back(start_node);
+
     std::cout << "Number of nodes: " << nodes_.size() << std::endl;
 
     // TODO: (ehosko) Matrix is symmetric, so we can optimize this
@@ -132,22 +137,23 @@ void FloorplanGraph::buildGraph()
             }
         }
     }
-
     std::cout << "Weighted Edge Matrix: " << weightedEdgeMatrix_ << std::endl;
 
 
     // Solve TSP problem
-    std::vector<int> tour;
-    TSPSolver tspSolver(concorde_executable_);
+    std::vector<int>* tour = new std::vector<int>;
+    TSPSolver tspSolver(lkh_executable_);
     tspSolver.initTSPSolver(weightedEdgeMatrix_);
 
-    tspSolver.solveTSP(tour);
+    tspSolver.solveTSP(tour,6);
 
     std::cout << "Tour: " << std::endl;
-    for(int i = 0; i < tour.size(); i++)
+    for(int i = 0; i < tour->size(); i++)
     {
-        std::cout << tour[i] << " ";
+        std::cout << (*tour)[i] << " ";
     }
+
+    std::cout << "HAE" <<std::endl;
 }
 
 std::pair<double,double> FloorplanGraph::transformCoordinate(int i, int j)

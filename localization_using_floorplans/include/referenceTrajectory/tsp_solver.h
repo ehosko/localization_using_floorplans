@@ -10,24 +10,25 @@ class TSPSolver
 {
 public:
     TSPSolver();
-    TSPSolver(std::string concorde_executable): concorde_executable_(concorde_executable) {};
+    TSPSolver(std::string executable): lkh_executable_(executable) {};
     ~TSPSolver();
 
     void initTSPSolver(Eigen::MatrixXd weightedAdjacenyMatrix);
 
-    void solveTSP(std::vector<int>& path);
+    void solveTSP(std::vector<int>* path, int start);
     
 private:
 
     void CreateTSPFile(Eigen::MatrixXd weightedAdjacenyMatrix);
-    void ReadTourFile();
+    void ReadTourFile(std::vector<int>* path);
 
-    void rotatePath(std::vector<int>& path, int start);
+    void rotatePath(std::vector<int>* path, int start);
 
-    std::string concorde_executable_;
+    std::string lkh_executable_;
 
     std::string tsp_file_ = "tsp_file.tsp";
     std::string tsp_tour_ = "tsp_file.tour";
+    std::string tsp_params_ = "tsp_file.par";
 
 };
 

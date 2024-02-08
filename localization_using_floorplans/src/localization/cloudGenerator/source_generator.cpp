@@ -85,6 +85,42 @@ void SourceGenerator::generateSourceCloud(pcl::PointCloud<pcl::PointXYZ> depthCl
     std::cout << "Source cloud generated of size " << _sourceCloud.width << std::endl;
 }
 
+
+std::vector<double> MinMaxPt(pcl::PointCloud<pcl::PointXYZ> depthCloud)
+{
+    // Compute min and max points
+    std::vector<double> minMaxPt;
+    double minX = 1000.0;
+    double minY = 1000.0;
+    double maxX = -1000.0;
+    double maxY = -1000.0;
+    for(int i = 0; i < depthCloud.width; i++)
+    {
+        if(depthCloud.points[i].x < minX)
+        {
+            minX = depthCloud.points[i].x;
+        }
+        if(depthCloud.points[i].x > maxX)
+        {
+            maxX = depthCloud.points[i].x;
+        }
+        if(depthCloud.points[i].y < minY)
+        {
+            minY = depthCloud.points[i].y;
+        }
+        if(depthCloud.points[i].y > maxY)
+        {
+            maxY = depthCloud.points[i].y;
+        }
+    }
+    minMaxPt.push_back(minX);
+    minMaxPt.push_back(minY);
+    minMaxPt.push_back(maxX);
+    minMaxPt.push_back(maxY);
+
+    return minMaxPt;
+}
+
 void SourceGenerator::ProjectOnFloor(pcl::PointCloud<pcl::PointXYZ> depthCloud,pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloud, Eigen::Quaterniond q)
 {
     // Transform depth cloud
@@ -102,6 +138,9 @@ void SourceGenerator::ProjectOnFloor(pcl::PointCloud<pcl::PointXYZ> depthCloud,p
 
         std::cout << "Depth cloud point " << depthCloudTransformed.width - i -1 << " x: " << depthCloudTransformed.points[depthCloudTransformed.width - i -1].x << "  y: " << depthCloudTransformed.points[depthCloudTransformed.width - i -1].y << "  z: " << depthCloudTransformed.points[depthCloudTransformed.width - i -1].z<< std::endl;
     }
+
+    std::vector<double> minMaxPt = MinMaxPt(depthCloudTransformed);
+    std::cout << "Min x: " << minMaxPt[0] << "  Min y: " << minMaxPt[1] << "  Max x: " << minMaxPt[2] << "  Max y: " << minMaxPt[3] << std::endl;
     
     // Compute normal vector of floor
     Eigen::Matrix3d rotationMatrix = q.normalized().toRotationMatrix();
@@ -110,7 +149,7 @@ void SourceGenerator::ProjectOnFloor(pcl::PointCloud<pcl::PointXYZ> depthCloud,p
 
     // Project depth cloud on floor
     pcl::PointCloud<pcl::PointXYZ>::Ptr depthCloudPtr(new pcl::PointCloud<pcl::PointXYZ>);
-    *depthCloudPtr = depthCloud;
+    *depthCloudPtr = depthCloudTransformed;
     //pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloudPtr(new pcl::PointCloud<pcl::PointXYZ>);
     //pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloudProjectedPtr(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
@@ -127,69 +166,62 @@ void SourceGenerator::ProjectOnFloor(pcl::PointCloud<pcl::PointXYZ> depthCloud,p
     //_sourceCloud = *sourceCloudProjectedPtr;
 
     // Set z to 0
-    for(int i = 0; i < _sourceCloud.width; i++)
+    for(int i = 0; i < sourceCloud->width; i++)
     {
         sourceCloud->points[i].z = 0.0;
     }
 
-    std::cout << "Depth cloud projected on floor of size " << _sourceCloud.width << std::endl;
-    //*sourceCloud = *sourceCloudProjectedPtr; 
+    std::cout << sourceCloud->points[0].z << std::endl;
+
+    // for(int i = 0; i < 5; i++)
+    // {
+    //     std::cout << "Projected depth cloud point " << i << " x: " << sourceCloud->points[i].x << "  y: " << sourceCloud->points[i].y << "  z: " << sourceCloud->points[i].z<< std::endl;
+    //     int width = sourceCloud->width;
+    //     std::cout << "Projected depth cloud point " << width - i -1 << " x: " << sourceCloud->points[width - i -1].x << "  y: " << sourceCloud->points[width - i -1].y << "  z: " << sourceCloud->points[width - i -1].z<< std::endl;
+    // }
+    // std::vector<double> minMaxPtS = MinMaxPt(*sourceCloud);
+    // std::cout << "Min x: " << minMaxPtS[0] << "  Min y: " << minMaxPtS[1] << "  Max x: " << minMaxPtS[2] << "  Max y: " << minMaxPtS[3] << std::endl;
+
 }
 
-void SourceGenerator::RemoveOutliers()
+void SourceGenerator::projectPosOnFloor(Eigen::Vector3d position, Eigen::Quaterniond q)
 {
-    // Remove outliers
-    // std::cout << "Removing outliers..." << std::endl;
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloudPtr(new pcl::PointCloud<pcl::PointXYZ>);
-    // *sourceCloudPtr = _sourceCloud;
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloudFilteredPtr(new pcl::PointCloud<pcl::PointXYZ>);
-    // pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-    // sor.setInputCloud(sourceCloudPtr);
-    // sor.setMeanK(50);
-    // sor.setStddevMulThresh(1.0);
-    // sor.filter(*sourceCloudFilteredPtr);
-    // _sourceCloud = *sourceCloudFilteredPtr;
-    // std::cout << "Outliers removed from source cloud of size " << _sourceCloud.width << std::endl;
-}
+    std::cout << "Projecting position on floor..." << std::endl;
 
-void SourceGenerator::RemoveOutliersPlaneInformation()
-{
-    // Remove outliers using plane information
-    // std::cout << "Removing outliers using plane information..." << std::endl;
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloudPtr(new pcl::PointCloud<pcl::PointXYZ>);
-    // *sourceCloudPtr = _sourceCloud;
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloudFilteredPtr(new pcl::PointCloud<pcl::PointXYZ>);
-    // pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
-    // coefficients->values.resize(4);
-    // coefficients->values[0] = 0.0;
-    // coefficients->values[1] = 0.0;
-    // coefficients->values[2] = 1.0;
-    // coefficients->values[3] = 0.0;
-    // pcl::ProjectInliers<pcl::PointXYZ> proj;
-    // proj.setModelType(pcl::SACMODEL_PLANE);
-    // proj.setInputCloud(sourceCloudPtr);
-    // proj.setModelCoefficients(coefficients);
-    // proj.filter(*sourceCloudFilteredPtr);
-    // _sourceCloud = *sourceCloudFilteredPtr;
-    // std::cout << "Outliers removed from source cloud of size " << _sourceCloud.width << std::endl;
-}
+    pcl::PointCloud<pcl::PointXYZ>::Ptr depthCloudPtr(new pcl::PointCloud<pcl::PointXYZ>);
 
-void SourceGenerator::RemoveOutliersGICP()
-{
-    // Remove outliers using GICP
-    // std::cout << "Removing outliers using GICP..." << std::endl;
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloudPtr(new pcl::PointCloud<pcl::PointXYZ>);
-    // *sourceCloudPtr = _sourceCloud;
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloudFilteredPtr(new pcl::PointCloud<pcl::PointXYZ>);
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr targetCloudPtr(new pcl::PointCloud<pcl::PointXYZ>);
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr targetCloudFilteredPtr(new pcl::PointCloud<pcl::PointXYZ>);
-    // pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-    // icp.setInputSource(sourceCloudPtr);
-    // icp.setInputTarget(targetCloudPtr);
-    // icp.align(*sourceCloudFilteredPtr);
-    // _sourceCloud = *sourceCloudFilteredPtr;
-    // std::cout << "Outliers removed from source cloud of size " << _sourceCloud.width << std::endl;
-}   
+    // Project position on floor
+    pcl::PointCloud<pcl::PointXYZ> positionCloud;
+    positionCloud.push_back(pcl::PointXYZ(position(0), position(1), position(2)));
+    *depthCloudPtr = positionCloud;
+
+    // Compute normal vector of floor
+    Eigen::Matrix3d rotationMatrix = q.normalized().toRotationMatrix();
+    Eigen::Vector3d normalVector(0.0, 0.0, 1.0); // Assuming floor is horizontal
+    normalVector = rotationMatrix * normalVector;
+
+    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+    coefficients->values.resize(4);
+    coefficients->values[0] = normalVector(0);
+    coefficients->values[1] = normalVector(1);
+    coefficients->values[2] = normalVector(2);
+    coefficients->values[3] = 0.0;
+    pcl::ProjectInliers<pcl::PointXYZ> proj;
+    proj.setModelType(pcl::SACMODEL_PLANE);
+    proj.setInputCloud(depthCloudPtr);
+    proj.setModelCoefficients(coefficients);
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloud(new pcl::PointCloud<pcl::PointXYZ>);
+    proj.filter(*sourceCloud);
+
+    std::cout<< "Cloud Width " << sourceCloud->width << std::endl;
+
+    //Eigen::Vector3d positionTransformed = transform_ * T_B_C_ * position;
+    for(int i = 0; i < sourceCloud->width; i++)
+    {
+        std::cout << "Projected position on floor: " << sourceCloud->points[i].x << " " << sourceCloud->points[i].y << " " << sourceCloud->points[i].z << std::endl;
+    }
+}
 
 
 void SourceGenerator::cleanSourceCloud()

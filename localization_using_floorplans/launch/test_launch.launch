@@ -30,7 +30,7 @@
         <param name="threshold" value="5"/>
         <param name="skip_distance" value="5"/>
 
-        <param name="concorde_executable" value="/home/michbaum/Projects/concorde/TSP/concorde"/>
+        <param name="lkh_executable" value="/home/michbaum/Projects/LKH/LKH-2.0.9/LKH"/>
 
     </node>
 
