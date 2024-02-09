@@ -203,7 +203,7 @@ void SourceGenerator::TransformPoints(pcl::PointCloud<pcl::PointXYZ> depthCloud,
         }
         // Newest should be 1 past the requested timestamp, oldest should be one
         // before the requested timestamp.
-        Eigen::Affine3d transform_newest;
+        Eigen::Transform<double, 3, Eigen::Affine> transform_newest;
         geometry_msgs::TransformStamped transform_msg = *it;
         Eigen::Vector3d position(transform_msg.transform.translation.x, transform_msg.transform.translation.y, transform_msg.transform.translation.z);
         Eigen::Quaterniond orientation(transform_msg.transform.rotation.w, transform_msg.transform.rotation.x, transform_msg.transform.rotation.y, transform_msg.transform.rotation.z);
@@ -337,11 +337,8 @@ void SourceGenerator::projectPosOnFloor(Eigen::Vector3d position, Eigen::Quatern
 
     std::cout<< "Cloud Width " << sourceCloud->width << std::endl;
 
-    //Eigen::Vector3d positionTransformed = transform_ * T_B_C_ * position;
-    for(int i = 0; i < sourceCloud->width; i++)
-    {
-        std::cout << "Projected position on floor: " << sourceCloud->points[i].x << " " << sourceCloud->points[i].y << " " << sourceCloud->points[i].z << std::endl;
-    }
+    //projected_pos = Eigen::Translation3d(sourceCloud->points[0].x, sourceCloud->points[0].y, sourceCloud->points[0].z) * q.normalized();
+
 }
 
 

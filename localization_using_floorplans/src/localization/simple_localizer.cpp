@@ -116,7 +116,7 @@ int SimpleLocalizer::computeTransformationGICP(pcl::PointCloud<pcl::PointXYZ> so
     return gicp.hasConverged();
 }
 
-void SimpleLocalizer::publishTransformation()
+void SimpleLocalizer::publishTransformation(Eigen::Vector3d position, Eigen::Quaterniond orientation)
 {
     // TODO implement
 
@@ -125,15 +125,15 @@ void SimpleLocalizer::publishTransformation()
     transformStamped.header.frame_id = "world";
     transformStamped.child_frame_id = "floorplan";
     
-    Eigen::Quaterniond quaternion(transformationMatrix_.block<3, 3>(0, 0));
+    //Eigen::Quaterniond quaternion(transformationMatrix_.block<3, 3>(0, 0));
     
-    transformStamped.transform.translation.x = transformationMatrix_(0, 3);
-    transformStamped.transform.translation.y = transformationMatrix_(1, 3);
-    transformStamped.transform.translation.z = transformationMatrix_(2, 3);
-    transformStamped.transform.rotation.x = quaternion.x();
-    transformStamped.transform.rotation.y = quaternion.y();
-    transformStamped.transform.rotation.z = quaternion.z();
-    transformStamped.transform.rotation.w = quaternion.w();
+    transformStamped.transform.translation.x = position.x();
+    transformStamped.transform.translation.y = position.y();
+    transformStamped.transform.translation.z = position.z();
+    transformStamped.transform.rotation.x = orientation.x();
+    transformStamped.transform.rotation.y = orientation.y();
+    transformStamped.transform.rotation.z = orientation.z();
+    transformStamped.transform.rotation.w = orientation.w();
 
     broadcaster_.sendTransform(transformStamped);
 
@@ -184,12 +184,14 @@ void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
             ROS_INFO("\n******************** Has converged:  %d ********************\n", hasConverged);
 
             //calculate transformed position
-            Eigen::Vector3d transformed_position = transformationMatrix_.block<3, 3>(0, 0) * position_ + transformationMatrix_.block<3, 1>(0, 3);
+            Eigen::Quaterniond q(transformationMatrix_.block<3, 3>(0, 0));
+            Eigen::Vector3d transformed_position = q * position_ + transformationMatrix_.block<3, 1>(0, 3);
+            Eigen::Quaterniond transformed_orientation = q * orientation_;
             std::cout << "Transformed position: " << transformed_position << std::endl;
             transformationFile_ << transformed_position.x() << " " << transformed_position.y() << " " << transformed_position.z() << std::endl;
 
             if(hasConverged){
-              publishTransformation();
+              publishTransformation(transformed_position, transformed_orientation);
             }
         }
         else

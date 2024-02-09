@@ -44,7 +44,7 @@ class SimpleLocalizer
 
         void syncCallback(const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const nav_msgs::OdometryConstPtr& odom_msg);
 
-        void publishTransformation();
+        void publishTransformation(Eigen::Vector3d position, Eigen::Quaterniond orientation);
 
         std::ofstream transformationFile_;
 
