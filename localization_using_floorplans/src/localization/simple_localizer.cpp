@@ -55,7 +55,7 @@ void SimpleLocalizer::setupFromParam()
     }
     else
     {
-        //transformationFile_ << "x y z qx qy qz qw" << std::endl;
+        transformationFile_ << "x y z" << std::endl;
     }
 
     ros::spin();
@@ -73,17 +73,6 @@ int SimpleLocalizer::computeTransformationGICP(pcl::PointCloud<pcl::PointXYZ> so
     pcl::PointCloud<pcl::PointXYZ>::Ptr targetCloudPtr(new pcl::PointCloud<pcl::PointXYZ>);
     *targetCloudPtr = targetCloud;
 
-
-    for(int i = 0; i < 5; i++)
-    {
-        transformationFile_ << "Projected source cloud point " << i << " x: " << sourceCloudPtr->points[i].x << "  y: " << sourceCloudPtr->points[i].y << "  z: " << sourceCloudPtr->points[i].z<< std::endl;
-        int width = sourceCloudPtr->width;
-        transformationFile_ << "Projected source cloud point " << width - i -1 << " x: " << sourceCloudPtr->points[width - i -1].x << "  y: " << sourceCloudPtr->points[width - i -1].y << "  z: " << sourceCloudPtr->points[width - i -1].z<< std::endl;
-
-        transformationFile_ << "Projected target cloud point " << i << " x: " << targetCloudPtr->points[i].x << "  y: " << targetCloudPtr->points[i].y << "  z: " << targetCloudPtr->points[i].z<< std::endl;
-        width = targetCloudPtr->width;
-        transformationFile_ << "Projected target cloud point " << width - i -1 << " x: " << targetCloudPtr->points[width - i -1].x << "  y: " << targetCloudPtr->points[width - i -1].y << "  z: " << targetCloudPtr->points[width - i -1].z<< std::endl;
-    }
     pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> gicp;
     gicp.setInputSource(sourceCloudPtr);
     gicp.setInputTarget(targetCloudPtr);
@@ -154,6 +143,8 @@ void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
     Eigen::Vector3d position(msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z);
     Eigen::Quaterniond orientation(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z);
 
+    
+
     double position_delta = (position - position_).norm();
     double rotation_delta = (orientation.inverse() * orientation_).vec().norm();
 
@@ -167,7 +158,7 @@ void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
         // Here generate the source cloud
         sourceGenerator_.projectPosOnFloor(position_, orientation_);
 
-        sourceGenerator_.generateSourceCloud(depthCloud_, orientation_);
+        sourceGenerator_.generateSourceCloud(depthCloud_, orientation_, msg.header.stamp);
         targetGenerator_.generateTargetCloud(position_, orientation_);
 
         // GICP needs at least 20 points
@@ -182,9 +173,10 @@ void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
             //calculate transformed position
             Eigen::Vector3d transformed_position = transformationMatrix_.block<3, 3>(0, 0) * position_ + transformationMatrix_.block<3, 1>(0, 3);
             std::cout << "Transformed position: " << transformed_position << std::endl;
+            transformationFile_ << transformed_position.x() << " " << transformed_position.y() << " " << transformed_position.z() << std::endl;
 
             if(hasConverged){
-            publishTransformation();
+              publishTransformation();
             }
         }
         else
@@ -204,6 +196,7 @@ void SimpleLocalizer::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
     // Here only save the current cloud
     pcl::fromROSMsg(*msg, depthCloud_);
+    //sourceGenerator_.depthCloud_msg_.push_back(msg);
 }
 
 

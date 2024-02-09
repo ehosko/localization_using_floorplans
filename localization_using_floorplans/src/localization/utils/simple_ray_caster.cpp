@@ -108,6 +108,8 @@ bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point2f>* result,
                 break;
             }
 
+            //result->push_back(cv::Point2f(current_position.x(), current_position.y()));
+
             // map_->getVoxelCenter(&voxel_center, current_position);
             // result->push_back(voxel_center);
         }

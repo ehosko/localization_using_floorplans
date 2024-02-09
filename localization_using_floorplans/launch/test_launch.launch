@@ -26,9 +26,12 @@
 
         <param name="log_file" value="/home/michbaum/Projects/optag_EH/data/floorplan/transformation.txt"/>
 
-        <param name="num_samples" value="50"/>
+        <param name="num_samples" value="500"/>
         <param name="threshold" value="5"/>
         <param name="skip_distance" value="5"/>
+        <param name="edge_log_file" value="/home/michbaum/Projects/optag_EH/data/floorplan/edges.txt"/>
+        <param name="node_log_file" value="/home/michbaum/Projects/optag_EH/data/floorplan/nodes.txt"/>
+        <param name="path_log_file" value="/home/michbaum/Projects/optag_EH/data/floorplan/path.txt"/>
 
         <param name="lkh_executable" value="/home/michbaum/Projects/LKH/LKH-2.0.9/LKH"/>
 

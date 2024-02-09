@@ -28,17 +28,32 @@ struct Node
         this->parent = nullptr;
     }
 
-    bool traversable(const std::vector<cv::Point2f>& segments,double eps = 0.05)
+    bool traversable(const std::vector<cv::Point2f>& segments,Eigen::Vector3d pos, double eps = 0.05)
     {
-        // Check if point is traversable
-        // for(int i = 0; i < segments.size(); i++)
-        // {
-        //     if(std::abs(segments[i].x - point.x) <= eps && std::abs(segments[i].y - point.y) <= eps)
-        //     {
-        //         return false;
-        //     }
-        // }
-        return true;
+        bool trav = false;
+        //Check if point is traversable
+        for(int i = 0; i < segments.size(); i++)
+        {
+            // Check if point is on segment
+            if(std::abs(segments[i].x - point.x) <= eps && std::abs(segments[i].y - point.y) <= eps)
+            {
+                return true;
+            }
+            else
+            {
+                // Check if point is within distance of segment
+
+                cv::Point2f point = segments[i];
+                double dist_segment = getDistance(point, this->point);
+                double dist_robot = getDistance(cv::Point2f(pos(0),pos(1)), this->point);
+                if(dist_segment + eps > dist_robot)
+                {
+                    trav = trav || true;
+                }
+            }
+           
+        }
+        return trav;
     }
 };
 
@@ -65,7 +80,7 @@ double getDistance(cv::Point2f p1, cv::Point2f p2){
 }
 
 
-bool aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv::Point2f>& path, std::vector<cv::Point2f> segments,double x_min, double x_max, double y_min, double y_max,double resolution)
+bool aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv::Point2f>& path, std::vector<cv::Point2f> segments,Eigen::Vector3d pos,double x_min, double x_max, double y_min, double y_max,double resolution)
 {
     // Boundaries
     // int x_min = 0;
@@ -140,7 +155,7 @@ bool aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv::Point2f>& path, 
                     Node* neighborNode = new Node(neighbor, tenetative_g, tenetative_h, tenetative_f, current);
 
                     // Check if neighbor is traversable
-                    if(neighborNode->traversable(segments))
+                    if(neighborNode->traversable(segments,pos))
                     {
                         openSet.push(neighborNode);
                         closedSet[neighbor] = neighborNode;

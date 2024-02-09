@@ -30,7 +30,7 @@ void TSPSolver::solveTSP(std::vector<int>* path,int start)
     system(command.c_str());
 
     ReadTourFile(path);
-    rotatePath(path, start);
+    //rotatePath(path, start);
 }
 
 void TSPSolver::CreateTSPFile(Eigen::MatrixXd weightedAdjacenyMatrix)
@@ -47,7 +47,7 @@ void TSPSolver::CreateTSPFile(Eigen::MatrixXd weightedAdjacenyMatrix)
     {
         for(int j = 0; j < weightedAdjacenyMatrix.cols(); j++)
         {
-            file << (int)(weightedAdjacenyMatrix(i,j) * 100) << " ";
+            file << (int)(weightedAdjacenyMatrix(i,j)) << " ";
         }
         file << std::endl;
     }
@@ -66,13 +66,14 @@ void TSPSolver::ReadTourFile(std::vector<int>* path)
         if(line.find("TOUR_SECTION") != std::string::npos)
         {
             std::getline(file, line);
-            tour = line;
+            int idx = std::stoi(line, nullptr, 10);
 
-            while(line.find("-1") == std::string::npos)
+            while(idx != -1)
             {
+                // -1 because the tour starts at 1
+                path->push_back(idx - 1);
                 std::getline(file, line);
-
-                path->push_back(std::stoi(line, nullptr, 10));
+                idx = std::stoi(line, nullptr, 10);
             }
         }
     }

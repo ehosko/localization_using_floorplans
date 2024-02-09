@@ -61,20 +61,56 @@ void SourceGenerator::initSourceGenerator(ros::NodeHandle& nh)
 void SourceGenerator::transformCallback(const geometry_msgs::TransformStamped& transform_msg)
 {
     // Transform callback
-    Eigen::Vector3d position(transform_msg.transform.translation.x, transform_msg.transform.translation.y, transform_msg.transform.translation.z);
-    Eigen::Quaterniond orientation(transform_msg.transform.rotation.w, transform_msg.transform.rotation.x, transform_msg.transform.rotation.y, transform_msg.transform.rotation.z);
+    // Eigen::Vector3d position(transform_msg.transform.translation.x, transform_msg.transform.translation.y, transform_msg.transform.translation.z);
+    // Eigen::Quaterniond orientation(transform_msg.transform.rotation.w, transform_msg.transform.rotation.x, transform_msg.transform.rotation.y, transform_msg.transform.rotation.z);
 
-    transform_ = Eigen::Translation3d(position) * orientation;
+    // transform_ = Eigen::Translation3d(position) * orientation;
 
-    std::cout << "Transform received: " << transform_(0,0) << " " << transform_(0,1) << " " << transform_(0,2) << std::endl;
+    // std::cout << "Transform received: " << transform_(0,0) << " " << transform_(0,1) << " " << transform_(0,2) << std::endl;
+
+    transform_msg_.push_back(transform_msg);
 }
 
-void SourceGenerator::generateSourceCloud(pcl::PointCloud<pcl::PointXYZ> depthCloud, Eigen::Quaterniond q)
+void SourceGenerator::generateSourceCloud(pcl::PointCloud<pcl::PointXYZ> depthCloud, Eigen::Quaterniond q, const ros::Time& timestamp)
 {
     // Generate source cloud
     std::cout << "Generating source cloud..." << std::endl;
+
+    bool match_found = false;
+    if(depthCloud_msg_.size() == 0)
+    {
+        ROS_ERROR("No depth cloud messages received.");
+        return;
+    }
+    std::vector<sensor_msgs::PointCloud2ConstPtr>::iterator it =
+        depthCloud_msg_.begin();
+    for (; it != depthCloud_msg_.end(); ++it) {
+        const sensor_msgs::PointCloud2& pointCloud = **it;
+        if (pointCloud.header.stamp > timestamp) {
+            if ((pointCloud.header.stamp - timestamp).toNSec() < timestamp_tolerance_ns_) {
+                match_found = true;
+            }
+            break;
+        }
+
+        if ((timestamp - pointCloud.header.stamp).toNSec() < timestamp_tolerance_ns_) {
+            match_found = true;
+            break;
+        }
+    }
+    
+    if(match_found){
+        pcl::fromROSMsg(**it, depthCloud);
+    }else
+    {
+        std::cout << (*it)->header << " vs " << timestamp << std::endl;
+        //ROS_ERROR("No matching point cloud found.");
+    }
+
     pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloud(new pcl::PointCloud<pcl::PointXYZ>);
-    ProjectOnFloor(depthCloud, sourceCloud, q);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr depthCloudTransformed(new pcl::PointCloud<pcl::PointXYZ>);
+    TransformPoints(depthCloud, depthCloudTransformed, q, timestamp);
+    ProjectOnFloor(*depthCloudTransformed, sourceCloud, q);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloudThinned(new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -121,16 +157,92 @@ std::vector<double> MinMaxPt(pcl::PointCloud<pcl::PointXYZ> depthCloud)
     return minMaxPt;
 }
 
-void SourceGenerator::ProjectOnFloor(pcl::PointCloud<pcl::PointXYZ> depthCloud,pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloud, Eigen::Quaterniond q)
+void SourceGenerator::TransformPoints(pcl::PointCloud<pcl::PointXYZ> depthCloud,pcl::PointCloud<pcl::PointXYZ>::Ptr depthCloudTransform,Eigen::Quaterniond q, const ros::Time& timestamp)
 {
-    // Transform depth cloud
-    pcl::PointCloud<pcl::PointXYZ> depthCloudTransformed;
+    bool match_found = false;
+    std::vector<geometry_msgs::TransformStamped>::iterator it =
+        transform_msg_.begin();
+    for (; it != transform_msg_.end(); ++it) {
+        // If the current transform is newer than the requested timestamp, we need
+        // to break.
+        if (it->header.stamp > timestamp) {
+            if ((it->header.stamp - timestamp).toNSec() < timestamp_tolerance_ns_) {
+                match_found = true;
+            }
+            break;
+        }
+
+        if ((timestamp - it->header.stamp).toNSec() < timestamp_tolerance_ns_) {
+            match_found = true;
+            break;
+        }
+    }
+
+    if (match_found) {
+        
+        geometry_msgs::TransformStamped transform_msg = *it;
+        Eigen::Vector3d position(transform_msg.transform.translation.x, transform_msg.transform.translation.y, transform_msg.transform.translation.z);
+        Eigen::Quaterniond orientation(transform_msg.transform.rotation.w, transform_msg.transform.rotation.x, transform_msg.transform.rotation.y, transform_msg.transform.rotation.z);
+        transform_ = Eigen::Translation3d(position) * orientation;
+  
+    } else {
+        // If we think we have an inexact match, have to check that we're still
+        // within bounds and interpolate.
+        if (it == transform_msg_.begin() || it == transform_msg_.end()) {
+            ROS_ERROR("No matching transform found.");
+         //return false;
+        }
+        // Newest should be 1 past the requested timestamp, oldest should be one
+        // before the requested timestamp.
+        Eigen::Affine3d transform_newest;
+        geometry_msgs::TransformStamped transform_msg = *it;
+        Eigen::Vector3d position(transform_msg.transform.translation.x, transform_msg.transform.translation.y, transform_msg.transform.translation.z);
+        Eigen::Quaterniond orientation(transform_msg.transform.rotation.w, transform_msg.transform.rotation.x, transform_msg.transform.rotation.y, transform_msg.transform.rotation.z);
+        transform_newest = Eigen::Translation3d(position) * orientation;
+
+        // int64_t offset_newest_ns = (it->header.stamp - timestamp).toNSec();
+        // // We already checked that this is not the beginning.
+        // it--;
+        // Eigen::Affine3d transform_oldest;
+        // transform_msg = *it;
+        // position = Eigen::Vector3d(transform_msg.transform.translation.x, transform_msg.transform.translation.y, transform_msg.transform.translation.z);
+        // orientation = Eigen::Quaterniond(transform_msg.transform.rotation.w, transform_msg.transform.rotation.x, transform_msg.transform.rotation.y, transform_msg.transform.rotation.z);
+
+        // transform_oldest = Eigen::Translation3d(position) * orientation;
+
+        // int64_t offset_oldest_ns = (timestamp - it->header.stamp).toNSec();
+
+        // // Interpolate between the two transformations using the exponential map.
+        // float t_diff_ratio =
+        //     static_cast<float>(offset_oldest_ns) /
+        //     static_cast<float>(offset_newest_ns + offset_oldest_ns);
+
+        // Eigen::Vector6 diff_vector =
+        //     (T_G_D_oldest.inverse() * T_G_D_newest).log();
+        // transform_ = transform_oldest * Transformation::exp(t_diff_ratio * diff_vector);
+
+        transform_ = transform_newest;
+    }
+
+    // Transform points
     for(int i = 0; i < depthCloud.width; i++)
     {
         Eigen::Vector3d point(depthCloud.points[i].x, depthCloud.points[i].y, depthCloud.points[i].z);
         Eigen::Vector3d pointTransformed = transform_ * T_B_C_ * point;
-        depthCloudTransformed.push_back(pcl::PointXYZ(pointTransformed(0), pointTransformed(1), pointTransformed(2)));
+        depthCloudTransform->push_back(pcl::PointXYZ(pointTransformed(0), pointTransformed(1), pointTransformed(2)));
     }
+}
+
+void SourceGenerator::ProjectOnFloor(pcl::PointCloud<pcl::PointXYZ> depthCloudTransformed,pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloud, Eigen::Quaterniond q)
+{
+    // Transform depth cloud
+    // pcl::PointCloud<pcl::PointXYZ> depthCloudTransformed;
+    // for(int i = 0; i < depthCloud.width; i++)
+    // {
+    //     Eigen::Vector3d point(depthCloud.points[i].x, depthCloud.points[i].y, depthCloud.points[i].z);
+    //     Eigen::Vector3d pointTransformed = transform_ * T_B_C_ * point;
+    //     depthCloudTransformed.push_back(pcl::PointXYZ(pointTransformed(0), pointTransformed(1), pointTransformed(2)));
+    // }
 
     for(int i = 0; i < 5; i++)
     {

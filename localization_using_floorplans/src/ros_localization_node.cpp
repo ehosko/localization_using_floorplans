@@ -10,11 +10,11 @@ int main(int argc, char** argv)
 
     ros::NodeHandle nh("");
 
-    FloorplanGraph floorplan_graph;
-    floorplan_graph.initFloorplanGraph(nh);
+    // FloorplanGraph floorplan_graph;
+    // floorplan_graph.initFloorplanGraph(nh);
 
-    // SimpleLocalizer simple_localizer(nh);
-    // simple_localizer.setupFromParam();
+    SimpleLocalizer simple_localizer(nh);
+    simple_localizer.setupFromParam();
 
     ros::spin();
 

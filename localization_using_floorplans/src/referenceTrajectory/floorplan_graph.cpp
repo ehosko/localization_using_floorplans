@@ -30,6 +30,10 @@ void FloorplanGraph::initFloorplanGraph(ros::NodeHandle& nh)
 
     nh.getParam("floorplan_node/lkh_executable", lkh_executable_);
 
+    nh.getParam("floorplan_node/edge_log_file", edge_log_file_);
+    nh.getParam("floorplan_node/node_log_file", node_log_file_);
+    nh.getParam("floorplan_node/path_log_file", path_log_file_);
+
     image_height_ = experiment_height_ / resolution_;
     image_width_ = experiment_width_ / resolution_;
 
@@ -98,23 +102,47 @@ void FloorplanGraph::buildGraph()
     }
     std::cout << "Occupancy Grid: " <<  occupancyGrid_.rows() << " " <<occupancyGrid_.cols() << std::endl;
 
+    std::ofstream node_file(node_log_file_);
+    // Add starting node
+    std::pair<int,int> start_point = transformMapToGrid(0, 0);
+    Node start_node = {0, 0, start_point.second, start_point.first};
+    nodes_.push_back(start_node);
+
+    std::cout << "Start Node: " << start_node.i << "," << start_node.j << std::endl;
+    node_file <<  0 << " " << 0 << std::endl;
+  
     for(int i = 0; i < num_samples_; i++)
     {
         int x = rand() % map_.cols;
         int y = rand() % map_.rows;
         if(occupancyGrid_(y,x) == 0 && !neighborsOccupied(y,x,skip_distance_)){
-            std::pair<double,double> point = transformCoordinate(y, x);
+            std::pair<double,double> point = transformGridToMap(y, x);
             Node node = {point.first, point.second, y, x};
+            node_file << node.x << " " << node.y << std::endl;
             nodes_.push_back(node);
         } 
     }
 
-    // Add starting node
-    std::pair<double,double> start_point = transformCoordinate(0, 0);
-    Node start_node = {start_point.first, start_point.second, 0, 0};
-    nodes_.push_back(start_node);
+    // int stepX = map_.rows / std::sqrt(num_samples_);
+    // int stepY = map_.cols / std::sqrt(num_samples_);
+    // for(int i = 1; i < map_.rows; i += stepX)
+    // {
+    //     for(int j = 1; j < map_.cols; j += stepY)
+    //     {
+
+    //         if(occupancyGrid_(i,j) == 0 && !neighborsOccupied(i,j,skip_distance_)){
+    //             std::pair<double,double> point = transformGridToMap(i, j);
+    //             Node node = {point.first, point.second, i, j};
+    //             node_file << node.x << " " << node.y << std::endl;
+    //             nodes_.push_back(node);
+    //         }
+    //     }
+    // }
+    node_file.close();
 
     std::cout << "Number of nodes: " << nodes_.size() << std::endl;
+
+    std::ofstream edge_file(edge_log_file_);
 
     // TODO: (ehosko) Matrix is symmetric, so we can optimize this
     weightedEdgeMatrix_ = Eigen::MatrixXd::Zero(nodes_.size(), nodes_.size());
@@ -127,17 +155,20 @@ void FloorplanGraph::buildGraph()
                 double distance = sqrt(pow(nodes_[k].x - nodes_[l].x, 2) + pow(nodes_[k].y - nodes_[l].y, 2));
                 if(distance < threshold_){
                     std::cout << "A* from " << nodes_[k].x << "'" << nodes_[k].y << " to " << nodes_[l].x << "'" << nodes_[l].y << std::endl;
-                    weightedEdgeMatrix_(k,l) = aStar(nodes_[k], nodes_[l]);
+                    weightedEdgeMatrix_(k,l) = aStar(nodes_[k], nodes_[l]) * 100;
                     std::cout << "Distance: " << weightedEdgeMatrix_(k,l) << std::endl;
+                    edge_file << k << " " << l << " " << std::endl;
                 }
                 else{
-                    weightedEdgeMatrix_(k,l) = 1000;
+                    //weightedEdgeMatrix_(k,l) = std::numeric_limits<double>::max();
+                    weightedEdgeMatrix_(k,l) = 10e6;
                 }
 
             }
         }
     }
     std::cout << "Weighted Edge Matrix: " << weightedEdgeMatrix_ << std::endl;
+    edge_file.close();
 
 
     // Solve TSP problem
@@ -145,23 +176,34 @@ void FloorplanGraph::buildGraph()
     TSPSolver tspSolver(lkh_executable_);
     tspSolver.initTSPSolver(weightedEdgeMatrix_);
 
-    tspSolver.solveTSP(tour,6);
+    tspSolver.solveTSP(tour,0);
 
     std::cout << "Tour: " << std::endl;
-    for(int i = 0; i < tour->size(); i++)
+    std::ofstream path_file(path_log_file_);
+    for(int i = 0; i < tour->size() - 1; i++)
     {
-        std::cout << (*tour)[i] << " ";
+        path_file << tour->at(i) << " " << tour->at(i+1) << std::endl;
+        //std::cout << (*tour)[i] << " ";
     }
+    path_file.close();
 
     std::cout << "HAE" <<std::endl;
 }
 
-std::pair<double,double> FloorplanGraph::transformCoordinate(int i, int j)
+std::pair<double,double> FloorplanGraph::transformGridToMap(int i, int j)
 {
     double x = (j * ((float)experiment_width_/image_width_) - 0.5f*experiment_width_);
     double y = -(i * ((float)experiment_height_/image_height_) - 0.5f*experiment_height_);
 
     return std::make_pair(x,y);
+}
+
+std::pair<int,int> FloorplanGraph::transformMapToGrid(double x, double y)
+{
+    int i = (int)(-y / ((float)experiment_height_/image_height_) + 0.5f*image_height_);
+    int j = (int)(x / ((float)experiment_width_/image_width_) + 0.5f*image_width_);
+
+    return std::make_pair(i,j);
 }
 
 struct NodeStar
@@ -255,7 +297,7 @@ double FloorplanGraph::aStar(Node start, Node goal)
                     continue;
                 }
 
-                std::pair<double,double> point = transformCoordinate(i, j);
+                std::pair<double,double> point = transformGridToMap(i, j);
                 Node neighbor_node = {point.first,point.second,i,j};
                 
                 double tenetative_g = current->g + getDistance(current->node, neighbor_node);

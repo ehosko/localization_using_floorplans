@@ -39,7 +39,8 @@ private:
 
     void buildGraph();
     double aStar(Node start, Node goal);
-    std::pair<double,double> transformCoordinate(int i, int j);
+    std::pair<double,double> transformGridToMap(int i, int j);
+    std::pair<int,int> transformMapToGrid(double x, double y);
 
     bool neighborsOccupied(int i, int j, int radius);
 
@@ -63,6 +64,10 @@ private:
 
     std::vector<Node> nodes_;
     Eigen::MatrixXd weightedEdgeMatrix_;
+
+    std::string edge_log_file_;
+    std::string node_log_file_;
+    std::string path_log_file_;
     
 };
 
