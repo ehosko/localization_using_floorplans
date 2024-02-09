@@ -35,7 +35,7 @@ struct Node
         for(int i = 0; i < segments.size(); i++)
         {
             // Check if point is on segment
-            if(std::abs(segments[i].x - point.x) <= eps && std::abs(segments[i].y - point.y) <= eps)
+            if(std::abs(segments[i].x - point.x) <= (eps * 0.1) && std::abs(segments[i].y - point.y) <= (eps *0.1))
             {
                 return true;
             }

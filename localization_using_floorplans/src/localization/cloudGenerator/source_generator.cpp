@@ -76,36 +76,45 @@ void SourceGenerator::generateSourceCloud(pcl::PointCloud<pcl::PointXYZ> depthCl
     // Generate source cloud
     std::cout << "Generating source cloud..." << std::endl;
 
-    bool match_found = false;
-    if(depthCloud_msg_.size() == 0)
-    {
-        ROS_ERROR("No depth cloud messages received.");
-        return;
-    }
-    std::vector<sensor_msgs::PointCloud2ConstPtr>::iterator it =
-        depthCloud_msg_.begin();
-    for (; it != depthCloud_msg_.end(); ++it) {
-        const sensor_msgs::PointCloud2& pointCloud = **it;
-        if (pointCloud.header.stamp > timestamp) {
-            if ((pointCloud.header.stamp - timestamp).toNSec() < timestamp_tolerance_ns_) {
-                match_found = true;
-            }
-            break;
-        }
+    // bool match_found = false;
+    // if(depthCloud_msg_.size() == 0)
+    // {
+    //     ROS_ERROR("No depth cloud messages received.");
+    //     return;
+    // }
+    // std::vector<sensor_msgs::PointCloud2ConstPtr>::iterator it =
+    //     depthCloud_msg_.begin();
+    // for (; it != depthCloud_msg_.end(); ++it) {
+    //     const sensor_msgs::PointCloud2& pointCloud = **it;
+    //     if (pointCloud.header.stamp > timestamp) {
+    //         if ((pointCloud.header.stamp - timestamp).toNSec() < timestamp_tolerance_ns_) {
+    //             match_found = true;
+    //         }
+    //         break;
+    //     }
 
-        if ((timestamp - pointCloud.header.stamp).toNSec() < timestamp_tolerance_ns_) {
-            match_found = true;
-            break;
-        }
-    }
+    //     if ((timestamp - pointCloud.header.stamp).toNSec() < timestamp_tolerance_ns_) {
+    //         match_found = true;
+    //         break;
+    //     }
+    // }
     
-    if(match_found){
-        pcl::fromROSMsg(**it, depthCloud);
-    }else
-    {
-        std::cout << (*it)->header << " vs " << timestamp << std::endl;
-        //ROS_ERROR("No matching point cloud found.");
-    }
+    // if(match_found){
+    //     std::cout<< "Matching point cloud found" << std::endl;
+    //     pcl::fromROSMsg(**it, depthCloud);
+    // }else
+    // {
+    //     try{
+    //         const sensor_msgs::PointCloud2& pointCloud = **(it-1);
+    //         std::cout << pointCloud.header.stamp << " vs " << timestamp << std::endl;
+    //     //ROS_ERROR("No matching point cloud found.");
+    //     }
+    //     catch(const std::exception& e)
+    //     {
+    //         std::cerr << e.what() << '\n';
+    //     }
+        
+    // }
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr depthCloudTransformed(new pcl::PointCloud<pcl::PointXYZ>);

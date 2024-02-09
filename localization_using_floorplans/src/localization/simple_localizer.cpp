@@ -41,8 +41,21 @@ void SimpleLocalizer::setupFromParam()
     std::cout << "Floorplan path: " << floorplan_path << std::endl;
 
     // Set up subscribers
-    odomSub_ = nh_.subscribe("/rovioli/odom_T_M_I", 1, &SimpleLocalizer::odomCallback, this);
-    cloudSub_ = nh_.subscribe("/isaac/isaac_sensor_model/isaac_sensor_out", 1, &SimpleLocalizer::cloudCallback, this);
+    // odomSub_ = nh_.subscribe("/rovioli/odom_T_M_I", 1, &SimpleLocalizer::odomCallback, this);
+    // cloudSub_ = nh_.subscribe("/isaac/isaac_sensor_model/isaac_sensor_out", 1, &SimpleLocalizer::cloudCallback, this);
+
+
+    // Create subscribers for the topics you want to synchronize
+    message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_sub(nh_, "/isaac/isaac_sensor_model/isaac_sensor_out", 1);
+    message_filters::Subscriber<nav_msgs::Odometry> odom_sub(nh_, "/rovioli/odom_T_M_I", 1);
+
+    // Synchronize the messages using ApproximateTime with a one-second time tolerance
+    //typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, nav_msgs::Odometry> SyncPolicy;
+    typedef message_filters::sync_policies::ExactTime<sensor_msgs::PointCloud2, nav_msgs::Odometry> SyncPolicy;
+    message_filters::Synchronizer<SyncPolicy> sync(SyncPolicy(10), cloud_sub, odom_sub);
+
+    // Register the callback to be called when synchronized messages are received
+    sync.registerCallback(boost::bind(&SimpleLocalizer::syncCallback,boost::ref(*this), _1, _2));
 
     // Set up publishers for transformation
     //transformationPub_ = nh_.advertise<geometry_msgs::TransformStamped>("/floorplan/transformation", 1);
@@ -156,10 +169,10 @@ void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
         position_ = position;
         orientation_ = orientation;
         // Here generate the source cloud
-        sourceGenerator_.projectPosOnFloor(position_, orientation_);
+        //sourceGenerator_.projectPosOnFloor(position_, orientation_);
 
-        sourceGenerator_.generateSourceCloud(depthCloud_, orientation_, msg.header.stamp);
         targetGenerator_.generateTargetCloud(position_, orientation_);
+        sourceGenerator_.generateSourceCloud(depthCloud_, orientation_, msg.header.stamp);
 
         // GICP needs at least 20 points
         if(sourceGenerator_._sourceCloud.size() >= 20 && targetGenerator_._targetCloud.size() >= 20)
@@ -195,8 +208,18 @@ void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
 void SimpleLocalizer::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
     // Here only save the current cloud
-    pcl::fromROSMsg(*msg, depthCloud_);
-    //sourceGenerator_.depthCloud_msg_.push_back(msg);
+    // pcl::fromROSMsg(*msg, depthCloud_);
+    
+    sourceGenerator_.depthCloud_msg_.push_back(msg);
 }
 
+
+void SimpleLocalizer::syncCallback(const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const nav_msgs::OdometryConstPtr& odom_msg)
+{
+    // Here only save the current cloud
+    pcl::fromROSMsg(*cloud_msg, depthCloud_);
+    odomCallback(*odom_msg);
+    ROS_INFO("\n******************** SYNCED********************\n");
+
+}
 

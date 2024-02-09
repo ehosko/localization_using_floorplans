@@ -7,6 +7,10 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/sync_policies/exact_time.h>
 
 #include <sensor_msgs/PointCloud2.h>
 #include <Eigen/Geometry>
@@ -37,6 +41,8 @@ class SimpleLocalizer
         void odomCallback(const nav_msgs::Odometry& msg);
 
         void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg);
+
+        void syncCallback(const sensor_msgs::PointCloud2ConstPtr& cloud_msg, const nav_msgs::OdometryConstPtr& odom_msg);
 
         void publishTransformation();
 
