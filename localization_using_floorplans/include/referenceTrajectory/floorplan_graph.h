@@ -5,6 +5,14 @@
 #include <eigen3/Eigen/Geometry>
 
 #include <ros/ros.h>
+#include <std_msgs/String.h>
+
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+#include <message_filters/subscriber.h>
+#include <tf2_ros/message_filter.h>
+#include <nav_msgs/Odometry.h>
 
 #include <opencv2/opencv.hpp>
 
@@ -28,13 +36,14 @@ struct Node
 class FloorplanGraph
 {
 public:
-    FloorplanGraph();
+    FloorplanGraph() : tfListener_(tfBuffer_) {};
     ~FloorplanGraph();
 
     void initFloorplanGraph(ros::NodeHandle& nh);
 
     void setWeightedEdgeMatrix(Eigen::Matrix2d weightedAdjacenyMatrix) { weightedEdgeMatrix_ = weightedAdjacenyMatrix; };
-    
+        
+    std::ofstream path_file_;
 private:
 
     void buildGraph();
@@ -43,6 +52,19 @@ private:
     std::pair<int,int> transformMapToGrid(double x, double y);
 
     bool neighborsOccupied(int i, int j, int radius);
+
+    void odomCallback(const nav_msgs::Odometry& msg);
+
+    bool reachedCurrentNode(Eigen::Vector3d pos, Eigen::Quaterniond q);
+    //void getNextNode(Eigen::Vector3d& pos);
+    void broadcastTransform(Node nextNode);
+
+    ros::Publisher ready_pub_;
+    ros::Subscriber odom_sub_;
+
+    tf2_ros::Buffer tfBuffer_;
+    tf2_ros::TransformListener tfListener_;
+    tf2_ros::TransformBroadcaster broadcaster_;
 
     int image_width_ = 0; //Image width
     int image_height_ = 0; //Image height
@@ -59,8 +81,15 @@ private:
     cv::Mat map_;
     Eigen::MatrixXi occupancyGrid_;
 
+    std::vector<int>* tour_ = new std::vector<int>;
+    int next_node_counter_ = 0;
+
+    double radius_;
     int num_samples_ = 0;
     int skip_distance_ = 0;
+
+    //normal vector of the floor
+    Eigen::Vector3d floorNormal_ = Eigen::Vector3d(0.0, 0.0, 1.0);
 
     std::vector<Node> nodes_;
     Eigen::MatrixXd weightedEdgeMatrix_;
@@ -68,7 +97,7 @@ private:
     std::string edge_log_file_;
     std::string node_log_file_;
     std::string path_log_file_;
-    
+
 };
 
 #endif // "FLOORPLANGRAPH_H"

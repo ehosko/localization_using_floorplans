@@ -1,10 +1,10 @@
 #include "../../include/referenceTrajectory/floorplan_graph.h"
 
 
-FloorplanGraph::FloorplanGraph()
-{
-    // Constructor
-}
+// FloorplanGraph::FloorplanGraph()
+// {
+//     // Constructor
+// }
 
 FloorplanGraph::~FloorplanGraph()
 {
@@ -26,6 +26,8 @@ void FloorplanGraph::initFloorplanGraph(ros::NodeHandle& nh)
     nh.getParam("floorplan_node/num_samples", num_samples_);
     nh.getParam("floorplan_node/threshold", threshold_);
 
+    nh.getParam("floorplan_node/radius", radius_);
+
     nh.getParam("floorplan_node/skip_distance", skip_distance_);
 
     nh.getParam("floorplan_node/lkh_executable", lkh_executable_);
@@ -37,7 +39,95 @@ void FloorplanGraph::initFloorplanGraph(ros::NodeHandle& nh)
     image_height_ = experiment_height_ / resolution_;
     image_width_ = experiment_width_ / resolution_;
 
+    ready_pub_ = nh.advertise<std_msgs::String>("floorplan_node/opt_traj_ready", 10);
     buildGraph();
+
+    path_file_.open(path_log_file_);
+    if(!path_file_.is_open())
+    {
+        std::cout << "Error opening file" << std::endl;
+    }
+    else
+    {
+        path_file_ << "i x_curr y_curr x_floorplan y_floorplan" << std::endl;
+    }
+
+    odom_sub_ = nh.subscribe("/rovioli/odom_T_M_I", 1, &FloorplanGraph::odomCallback, this);
+
+    //path_file_ = std::ofstream path_file(path_log_file_);
+    
+}
+
+void FloorplanGraph::odomCallback(const nav_msgs::Odometry& msg)
+{
+     // Here check if odometry changed enough to update the position
+    Eigen::Vector3d position(msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z);
+    Eigen::Quaterniond orientation(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z);
+
+    std::cout<<"See if current node reahed"<< std::endl;
+    if(reachedCurrentNode(position,orientation)){
+        // Counter already increased during check
+        broadcastTransform(nodes_[tour_->at(next_node_counter_)]);
+    }
+}
+
+bool FloorplanGraph::reachedCurrentNode(Eigen::Vector3d pos, Eigen::Quaterniond q)
+{
+    //Project position onto floor
+    // TODO: (ehosko) Check math behind this projection
+    Eigen::Matrix3d rotationMatrix = q.normalized().toRotationMatrix();
+    Eigen::Vector3d normalVector(0.0, 0.0, 1.0); // Assuming floor is horizontal
+    normalVector = rotationMatrix * normalVector;
+
+    // Project the point onto the floor
+    double distance = -normalVector.dot(pos);
+    Eigen::Vector3d projectedVector = pos - distance * normalVector;
+
+    int indx = tour_->at(next_node_counter_);
+    Node currentNode =  nodes_[indx];
+
+    path_file_ << next_node_counter_ << " " << projectedVector.x() << " " << projectedVector.y() << " " << currentNode.x << " " << currentNode.y << std::endl;
+
+    
+    //Check if position in radius of current Node
+    if(std::abs(projectedVector.x() - currentNode.x) < radius_ && std::abs(projectedVector.y() - currentNode.y) < radius_)
+    {
+        // Check if following nodes also already near position
+        while(std::abs(projectedVector.x() - currentNode.x) < radius_ && std::abs(projectedVector.y() - currentNode.y) < radius_){
+            next_node_counter_++;
+            if(next_node_counter_ >= tour_->size()){
+                return false;
+            }
+            indx = tour_->at(next_node_counter_);
+            currentNode =  nodes_[indx];
+        }
+        std::cout<<"Reached Node "<< currentNode.x << " " << currentNode.y <<std::endl;
+        //next_node_counter_++;
+        return true;
+    }
+
+    return false;
+
+}
+
+void FloorplanGraph::broadcastTransform(Node nextNode)
+{
+    geometry_msgs::TransformStamped transformStamped;
+    transformStamped.header.stamp = ros::Time::now();
+    transformStamped.header.frame_id = "world";
+    transformStamped.child_frame_id = "optimal_trajectory";
+    
+    //Eigen::Quaterniond quaternion(transformationMatrix_.block<3, 3>(0, 0));
+    
+    transformStamped.transform.translation.x = nextNode.x;
+    transformStamped.transform.translation.y = nextNode.y;
+    transformStamped.transform.translation.z = 0;
+    transformStamped.transform.rotation.x = 0;
+    transformStamped.transform.rotation.y = 0;
+    transformStamped.transform.rotation.z = 0;
+    transformStamped.transform.rotation.w = 1;
+
+    broadcaster_.sendTransform(transformStamped);
 }
 
 bool FloorplanGraph::neighborsOccupied(int i, int j, int radius)
@@ -154,9 +244,9 @@ void FloorplanGraph::buildGraph()
             {
                 double distance = sqrt(pow(nodes_[k].x - nodes_[l].x, 2) + pow(nodes_[k].y - nodes_[l].y, 2));
                 if(distance < threshold_){
-                    std::cout << "A* from " << nodes_[k].x << "'" << nodes_[k].y << " to " << nodes_[l].x << "'" << nodes_[l].y << std::endl;
+                    //std::cout << "A* from " << nodes_[k].x << "'" << nodes_[k].y << " to " << nodes_[l].x << "'" << nodes_[l].y << std::endl;
                     weightedEdgeMatrix_(k,l) = aStar(nodes_[k], nodes_[l]) * 100;
-                    std::cout << "Distance: " << weightedEdgeMatrix_(k,l) << std::endl;
+                    //std::cout << "Distance: " << weightedEdgeMatrix_(k,l) << std::endl;
                     edge_file << k << " " << l << " " << std::endl;
                 }
                 else{
@@ -167,27 +257,34 @@ void FloorplanGraph::buildGraph()
             }
         }
     }
-    std::cout << "Weighted Edge Matrix: " << weightedEdgeMatrix_ << std::endl;
+    //std::cout << "Weighted Edge Matrix: " << weightedEdgeMatrix_ << std::endl;
     edge_file.close();
 
 
     // Solve TSP problem
-    std::vector<int>* tour = new std::vector<int>;
+    
     TSPSolver tspSolver(lkh_executable_);
     tspSolver.initTSPSolver(weightedEdgeMatrix_);
 
-    tspSolver.solveTSP(tour,0);
+    double cost = tspSolver.solveTSP(tour_,0);
 
     std::cout << "Tour: " << std::endl;
-    std::ofstream path_file(path_log_file_);
-    for(int i = 0; i < tour->size() - 1; i++)
+    
+    for(int i = 0; i < tour_->size() - 1; i++)
     {
-        path_file << tour->at(i) << " " << tour->at(i+1) << std::endl;
-        //std::cout << (*tour)[i] << " ";
+        std::cout << (*tour_)[i] << " ";
     }
-    path_file.close();
 
-    std::cout << "HAE" <<std::endl;
+    if(cost > 0 && !(tour_->empty())){
+        std_msgs::String msg;
+   
+        std::stringstream ss;
+        ss << "Optimal Trajectory sucessfully computed!";
+        msg.data = ss.str();
+        ready_pub_.publish(msg);
+    }
+
+    next_node_counter_ = 0;
 }
 
 std::pair<double,double> FloorplanGraph::transformGridToMap(int i, int j)

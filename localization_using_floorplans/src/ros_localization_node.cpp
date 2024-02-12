@@ -13,11 +13,14 @@ int main(int argc, char** argv)
     // FloorplanGraph floorplan_graph;
     // floorplan_graph.initFloorplanGraph(nh);
 
+
+
     SimpleLocalizer simple_localizer(nh);
     simple_localizer.setupFromParam();
 
     ros::spin();
 
-    //simple_localizer.transformationFile_.close();
+    // floorplan_graph.path_file_.close();
+    simple_localizer.transformationFile_.close();
     return 0;
 }

@@ -24,13 +24,15 @@ void TSPSolver::initTSPSolver(Eigen::MatrixXd weightedAdjacenyMatrix)
     CreateTSPFile(weightedAdjacenyMatrix);
 }
 
-void TSPSolver::solveTSP(std::vector<int>* path,int start)
+double TSPSolver::solveTSP(std::vector<int>* path,int start)
 {
     std::string command = lkh_executable_ + " " + tsp_params_;
     system(command.c_str());
 
-    ReadTourFile(path);
+    double cost = ReadTourFile(path);
     //rotatePath(path, start);
+
+    return cost;
 }
 
 void TSPSolver::CreateTSPFile(Eigen::MatrixXd weightedAdjacenyMatrix)
@@ -55,14 +57,25 @@ void TSPSolver::CreateTSPFile(Eigen::MatrixXd weightedAdjacenyMatrix)
     file.close();
 }
 
-void TSPSolver::ReadTourFile(std::vector<int>* path)
+double TSPSolver::ReadTourFile(std::vector<int>* path)
 {
     std::ifstream file(tsp_tour_);
     std::string line;
     std::string tour;
 
+    double cost = 0;
     while(std::getline(file, line))
     {
+        if (line.find("COMMENT : Length =") != std::string::npos) {
+            // Extract the length as a double
+            if (sscanf(line.c_str(), "COMMENT : Length = %lf", &cost) == 1) {
+                // Print the result
+                std::cout << "Length: " << cost << std::endl;
+            } else {
+                std::cerr << "Error extracting length from line: " << line << std::endl;
+            }
+        }
+
         if(line.find("TOUR_SECTION") != std::string::npos)
         {
             std::getline(file, line);
@@ -75,11 +88,12 @@ void TSPSolver::ReadTourFile(std::vector<int>* path)
                 std::getline(file, line);
                 idx = std::stoi(line, nullptr, 10);
             }
+            break;
         }
     }
     file.close();
 
-
+    return cost;
 }
 
 void TSPSolver::rotatePath(std::vector<int>* path, int start){

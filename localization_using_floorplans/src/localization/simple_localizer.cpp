@@ -36,6 +36,7 @@ void SimpleLocalizer::setupFromParam()
     // Known inital position and orientation
     position_ = Eigen::Vector3d(0, 0, 0);
     orientation_ = Eigen::Quaterniond(1, 0, 0, 0);
+    floorplan_position_ = Eigen::Vector3d(0, 0, 0);
     transformationMatrix_ = Eigen::Matrix4d::Identity();
 
     std::cout << "Floorplan path: " << floorplan_path << std::endl;
@@ -118,8 +119,6 @@ int SimpleLocalizer::computeTransformationGICP(pcl::PointCloud<pcl::PointXYZ> so
 
 void SimpleLocalizer::publishTransformation(Eigen::Vector3d position, Eigen::Quaterniond orientation)
 {
-    // TODO implement
-
     geometry_msgs::TransformStamped transformStamped;
     transformStamped.header.stamp = ros::Time::now();
     transformStamped.header.frame_id = "world";
@@ -156,10 +155,11 @@ void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
     Eigen::Vector3d position(msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z);
     Eigen::Quaterniond orientation(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z);
 
-    
-
     double position_delta = (position - position_).norm();
     double rotation_delta = (orientation.inverse() * orientation_).vec().norm();
+
+    floorplan_position_ += (position - position_);
+    floorplan_position_.z() = 0;  
 
     if (position_delta > d_l_|| rotation_delta > theta_l_)
     {
@@ -172,6 +172,7 @@ void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
         //sourceGenerator_.projectPosOnFloor(position_, orientation_);
 
         targetGenerator_.generateTargetCloud(position_, orientation_);
+        // targetGenerator_.generateTargetCloud(floorplan_position_, orientation_);
         sourceGenerator_.generateSourceCloud(depthCloud_, orientation_, msg.header.stamp);
 
         // GICP needs at least 20 points
@@ -186,11 +187,14 @@ void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
             //calculate transformed position
             Eigen::Quaterniond q(transformationMatrix_.block<3, 3>(0, 0));
             Eigen::Vector3d transformed_position = q * position_ + transformationMatrix_.block<3, 1>(0, 3);
+            // Eigen::Vector3d transformed_position = q * floorplan_position_ + transformationMatrix_.block<3, 1>(0, 3);
             Eigen::Quaterniond transformed_orientation = q * orientation_;
             std::cout << "Transformed position: " << transformed_position << std::endl;
-            transformationFile_ << transformed_position.x() << " " << transformed_position.y() << " " << transformed_position.z() << std::endl;
+            transformationFile_ << transformed_position.x() << " " << transformed_position.y() << " " << transformed_position.z() << 
+                                    transformed_orientation.x() << transformed_orientation.y() << transformed_orientation.z() << transformed_orientation.w() << std::endl;
 
             if(hasConverged){
+              floorplan_position_ = transformed_position;
               publishTransformation(transformed_position, transformed_orientation);
             }
         }

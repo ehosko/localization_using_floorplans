@@ -15,12 +15,12 @@ public:
 
     void initTSPSolver(Eigen::MatrixXd weightedAdjacenyMatrix);
 
-    void solveTSP(std::vector<int>* path, int start);
+    double solveTSP(std::vector<int>* path, int start);
     
 private:
 
     void CreateTSPFile(Eigen::MatrixXd weightedAdjacenyMatrix);
-    void ReadTourFile(std::vector<int>* path);
+    double ReadTourFile(std::vector<int>* path);
 
     void rotatePath(std::vector<int>* path, int start);
 

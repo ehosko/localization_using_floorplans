@@ -62,6 +62,9 @@ class SimpleLocalizer
 
         Eigen::Vector3d position_;
         Eigen::Quaterniond orientation_;
+
+        Eigen::Vector3d floorplan_position_;
+        //Eigen::Quaterniond floorplan_orientation_;
         
         double d_l_;
         double theta_l_;
