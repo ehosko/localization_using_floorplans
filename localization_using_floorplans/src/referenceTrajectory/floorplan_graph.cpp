@@ -25,6 +25,7 @@ void FloorplanGraph::initFloorplanGraph(ros::NodeHandle& nh)
 
     nh.getParam("floorplan_node/num_samples", num_samples_);
     nh.getParam("floorplan_node/threshold", threshold_);
+    nh.getParam("floorplan_node/occupancy_threshold", occupancy_radius_);
 
     nh.getParam("floorplan_node/radius", radius_);
 
@@ -34,14 +35,47 @@ void FloorplanGraph::initFloorplanGraph(ros::NodeHandle& nh)
 
     nh.getParam("floorplan_node/edge_log_file", edge_log_file_);
     nh.getParam("floorplan_node/node_log_file", node_log_file_);
+    nh.getParam("floorplan_node/opt_path_log_file", opt_path_log_file_);
     nh.getParam("floorplan_node/path_log_file", path_log_file_);
+
+    nh.getParam("floorplan_node/occupancy_log_file", occupancy_log_file_);
+    nh.getParam("floorplan_node/occupancy_opt_log_file", occupancy_opt_log_file_);
+
+    occupancy_file_.open(occupancy_log_file_);
+    if(!occupancy_file_.is_open())
+    {
+        std::cout << "Error opening file" << std::endl;
+    }
+    else
+    {
+        occupancy_file_ << "time,occupancy" << std::endl;
+    }
+
+    occupancy_opt_file_.open(occupancy_opt_log_file_);
+    if(!occupancy_opt_file_.is_open())
+    {
+        std::cout << "Error opening file" << std::endl;
+    }
+    else
+    {
+        occupancy_opt_file_ << "time,occupancy" << std::endl;
+    }
+
+    std::string sample_method;
+    nh.getParam("floorplan_node/sample_method", sample_method);
+    if(sample_method == "uniform")
+    {
+        sample_uniform_ = true;
+    }
+    else
+    {
+        sample_uniform_ = false;
+    }
 
     image_height_ = experiment_height_ / resolution_;
     image_width_ = experiment_width_ / resolution_;
 
     ready_pub_ = nh.advertise<std_msgs::String>("floorplan_node/opt_traj_ready", 10);
-    buildGraph();
-
     path_file_.open(path_log_file_);
     if(!path_file_.is_open())
     {
@@ -49,8 +83,10 @@ void FloorplanGraph::initFloorplanGraph(ros::NodeHandle& nh)
     }
     else
     {
-        path_file_ << "i x_curr y_curr x_floorplan y_floorplan" << std::endl;
+        path_file_ << "i indx x_floorplan y_floorplan" << std::endl;
     }
+
+    buildGraph();
 
     odom_sub_ = nh.subscribe("/rovioli/odom_T_M_I", 1, &FloorplanGraph::odomCallback, this);
 
@@ -69,6 +105,10 @@ void FloorplanGraph::odomCallback(const nav_msgs::Odometry& msg)
         // Counter already increased during check
         broadcastTransform(nodes_[tour_->at(next_node_counter_)]);
     }
+
+    // Log occupancy
+    double occ = (double)next_node_counter_/nodes_.size();
+    occupancy_opt_file_ << ros::Time::now().toSec() << "," << occ << std::endl;
 }
 
 bool FloorplanGraph::reachedCurrentNode(Eigen::Vector3d pos, Eigen::Quaterniond q)
@@ -87,6 +127,14 @@ bool FloorplanGraph::reachedCurrentNode(Eigen::Vector3d pos, Eigen::Quaterniond 
     Node currentNode =  nodes_[indx];
 
     path_file_ << next_node_counter_ << " " << projectedVector.x() << " " << projectedVector.y() << " " << currentNode.x << " " << currentNode.y << std::endl;
+
+    //Log total occupancy
+    for(int i = 0; i < nodes_to_visit_.size(); i++){
+        Node node = nodes_[nodes_to_visit_[i]];
+        if(std::abs(projectedVector.x() - node.x) < radius_ && std::abs(projectedVector.y() - node.y) < radius_)
+            nodes_to_visit_.erase(nodes_to_visit_.begin() + i);   
+    }
+    occupancy_file_ << ros::Time::now().toSec() << "," <<  1 - (double)(nodes_to_visit_.size())/nodes_.size() << std::endl;
 
     
     //Check if position in radius of current Node
@@ -130,6 +178,46 @@ void FloorplanGraph::broadcastTransform(Node nextNode)
     broadcaster_.sendTransform(transformStamped);
 }
 
+bool FloorplanGraph::isEdgeClear(Node start, Node goal)
+{
+    // Bresenham's line algorithm
+    int x_start = start.j;
+    int y_start = start.i;
+
+    int x_goal = goal.j;
+    int y_goal = goal.i;
+
+    int dx = std::abs(x_goal - x_start);
+    int dy = std::abs(y_goal - y_start);
+
+    int sx = x_start < x_goal ? 1 : -1;
+    int sy = y_start < y_goal ? 1 : -1;
+
+    int error = dx - dy;
+
+    while(x_start != x_goal || y_start != y_goal)
+    {
+        if(occupancyGrid_(y_start,x_start) == 1)
+        {
+            return false;
+        }
+
+        int e2 = 2 * error;
+        if(e2 > -dy)
+        {
+            error -= dy;
+            x_start += sx;
+        }
+        if(e2 < dx)
+        {
+            error += dx;
+            y_start += sy;
+        }
+    }
+
+    return true;
+}
+
 bool FloorplanGraph::neighborsOccupied(int i, int j, int radius)
 {
     for(int k = i - radius; k <= i + radius; k++)
@@ -144,6 +232,83 @@ bool FloorplanGraph::neighborsOccupied(int i, int j, int radius)
         }
     }
     return false;
+}
+
+void FloorplanGraph::buildOccupancyGrid(std::vector<std::vector<cv::Point>> contours)
+{
+    for (int i = 0; i < map_.rows; i++)
+    {
+        std::vector<int> row;
+        for (int j = 0; j < map_.cols; j++)
+        {
+            int occupied = 0;
+            for(auto &contour : contours)
+            {
+                // if(cv::pointPolygonTest(contour, cv::Point2f(j, i), false) == 0){
+                //     occupied = 1;
+                //     break;
+                // }
+                for(auto &point : contour)
+                {
+                    if (std::abs(point.x - j) <= occupancy_radius_ && std::abs(point.y - i) <= occupancy_radius_)
+                    {
+                        occupied = 1;
+                        break;
+                    }
+                }
+            }
+            occupancyGrid_(i,j) = occupied;
+           
+        }
+       
+        //occupancyGrid_.push_back(row);
+    }
+}
+
+
+void FloorplanGraph::sampleNodes_random()
+{
+    std::ofstream node_file(node_log_file_);
+    node_file <<  0 << " " << 0 << std::endl;
+  
+    for(int i = 0; i < num_samples_; i++)
+    {
+        int x = rand() % map_.cols;
+        int y = rand() % map_.rows;
+        if(occupancyGrid_(y,x) == 0 && !neighborsOccupied(y,x,skip_distance_)){
+            std::pair<double,double> point = transformGridToMap(y, x);
+            Node node = {point.first, point.second, y, x};
+            node_file << node.x << " " << node.y << std::endl;
+            nodes_.push_back(node);
+        } 
+    }
+
+    node_file.close();
+
+}
+
+void FloorplanGraph::sampleNodes_uniform()
+{
+    std::ofstream node_file(node_log_file_);
+    node_file <<  0 << " " << 0 << std::endl;
+
+    int stepX = map_.rows / std::sqrt(num_samples_);
+    int stepY = map_.cols / std::sqrt(num_samples_);
+    for(int i = 1; i < map_.rows; i += stepX)
+    {
+        for(int j = 1; j < map_.cols; j += stepY)
+        {
+
+            if(occupancyGrid_(i,j) == 0 && !neighborsOccupied(i,j,skip_distance_)){
+                std::pair<double,double> point = transformGridToMap(i, j);
+                Node node = {point.first, point.second, i, j};
+                node_file << node.x << " " << node.y << std::endl;
+                nodes_.push_back(node);
+            }
+        }
+    }
+
+    node_file.close();
 }
 
 void FloorplanGraph::buildGraph()
@@ -171,95 +336,73 @@ void FloorplanGraph::buildGraph()
 
     std::cout << map_.rows << " " << map_.cols << std::endl;
 
-    for (int i = 0; i < map_.rows; i++)
-    {
-        std::vector<int> row;
-        for (int j = 0; j < map_.cols; j++)
-        {
-            int occupied = 0;
-            for(auto &contour : contours)
-            {
-                if(cv::pointPolygonTest(contour, cv::Point2f(j, i), false) == 0){
-                    occupied = 1;
-                    break;
-                }
-            }
-            occupancyGrid_(i,j) = occupied;
-           
-        }
-       
-        //occupancyGrid_.push_back(row);
-    }
+    buildOccupancyGrid(contours);
     std::cout << "Occupancy Grid: " <<  occupancyGrid_.rows() << " " <<occupancyGrid_.cols() << std::endl;
-
-    std::ofstream node_file(node_log_file_);
+    std::cout << "Occupancy Grid: " <<  occupancyGrid_ << std::endl;
+    
     // Add starting node
     std::pair<int,int> start_point = transformMapToGrid(0, 0);
     Node start_node = {0, 0, start_point.second, start_point.first};
     nodes_.push_back(start_node);
 
-    std::cout << "Start Node: " << start_node.i << "," << start_node.j << std::endl;
-    node_file <<  0 << " " << 0 << std::endl;
-  
-    for(int i = 0; i < num_samples_; i++)
+    if(sample_uniform_)
     {
-        int x = rand() % map_.cols;
-        int y = rand() % map_.rows;
-        if(occupancyGrid_(y,x) == 0 && !neighborsOccupied(y,x,skip_distance_)){
-            std::pair<double,double> point = transformGridToMap(y, x);
-            Node node = {point.first, point.second, y, x};
-            node_file << node.x << " " << node.y << std::endl;
-            nodes_.push_back(node);
-        } 
+        sampleNodes_uniform();
     }
-
-    // int stepX = map_.rows / std::sqrt(num_samples_);
-    // int stepY = map_.cols / std::sqrt(num_samples_);
-    // for(int i = 1; i < map_.rows; i += stepX)
-    // {
-    //     for(int j = 1; j < map_.cols; j += stepY)
-    //     {
-
-    //         if(occupancyGrid_(i,j) == 0 && !neighborsOccupied(i,j,skip_distance_)){
-    //             std::pair<double,double> point = transformGridToMap(i, j);
-    //             Node node = {point.first, point.second, i, j};
-    //             node_file << node.x << " " << node.y << std::endl;
-    //             nodes_.push_back(node);
-    //         }
-    //     }
-    // }
-    node_file.close();
+    else
+    {
+        sampleNodes_random();
+    }
 
     std::cout << "Number of nodes: " << nodes_.size() << std::endl;
 
     std::ofstream edge_file(edge_log_file_);
 
     // TODO: (ehosko) Matrix is symmetric, so we can optimize this
+    // weightedEdgeMatrix_ = Eigen::MatrixXd::Zero(nodes_.size(), nodes_.size());
+    // for(int k = 0; k < nodes_.size(); k++)
+    // {
+    //     for(int l = 0; l < nodes_.size(); l++)
+    //     {
+    //         if(k != l)
+    //         {
+    //             double distance = sqrt(pow(nodes_[k].x - nodes_[l].x, 2) + pow(nodes_[k].y - nodes_[l].y, 2));
+    //             if(distance < threshold_){
+    //                 //std::cout << "A* from " << nodes_[k].x << "'" << nodes_[k].y << " to " << nodes_[l].x << "'" << nodes_[l].y << std::endl;
+    //                 weightedEdgeMatrix_(k,l) = aStar(nodes_[k], nodes_[l]) * 100;
+    //                 //std::cout << "Distance: " << weightedEdgeMatrix_(k,l) << std::endl;
+    //                 edge_file << k << " " << l << " " <<  weightedEdgeMatrix_(k,l)/100 << std::endl;
+    //             }
+    //             else{
+    //                 //weightedEdgeMatrix_(k,l) = std::numeric_limits<double>::max();
+    //                 weightedEdgeMatrix_(k,l) = 10e6;
+    //             }
+
+    //         }
+    //     }
+    // }
+    //std::cout << "Weighted Edge Matrix: " << weightedEdgeMatrix_ << std::endl;
+  
+
     weightedEdgeMatrix_ = Eigen::MatrixXd::Zero(nodes_.size(), nodes_.size());
+    // Create Node list 
     for(int k = 0; k < nodes_.size(); k++)
     {
-        for(int l = 0; l < nodes_.size(); l++)
-        {
+        for(int l = 0; l < nodes_.size(); l++){
             if(k != l)
             {
-                double distance = sqrt(pow(nodes_[k].x - nodes_[l].x, 2) + pow(nodes_[k].y - nodes_[l].y, 2));
-                if(distance < threshold_){
-                    //std::cout << "A* from " << nodes_[k].x << "'" << nodes_[k].y << " to " << nodes_[l].x << "'" << nodes_[l].y << std::endl;
-                    weightedEdgeMatrix_(k,l) = aStar(nodes_[k], nodes_[l]) * 100;
-                    //std::cout << "Distance: " << weightedEdgeMatrix_(k,l) << std::endl;
-                    edge_file << k << " " << l << " " << std::endl;
+                if(isEdgeClear(nodes_[k],nodes_[l])){
+                    weightedEdgeMatrix_(k,l) = nodes_[k].getDistance(nodes_[l]) * 100;
+                    edge_file << k << " " << l << " " <<  weightedEdgeMatrix_(k,l)/100 << std::endl;
                 }
                 else{
-                    //weightedEdgeMatrix_(k,l) = std::numeric_limits<double>::max();
                     weightedEdgeMatrix_(k,l) = 10e6;
                 }
-
             }
         }
     }
-    //std::cout << "Weighted Edge Matrix: " << weightedEdgeMatrix_ << std::endl;
-    edge_file.close();
 
+    edge_file.close();
 
     // Solve TSP problem
     
@@ -270,10 +413,14 @@ void FloorplanGraph::buildGraph()
 
     std::cout << "Tour: " << std::endl;
     
+    std::ofstream opt_path_file(opt_path_log_file_);
     for(int i = 0; i < tour_->size() - 1; i++)
     {
         std::cout << (*tour_)[i] << " ";
+        int idx = (*tour_)[i];
+        opt_path_file << i << " " << idx << " " << nodes_[idx].x << " " << nodes_[idx].y << std::endl;
     }
+    opt_path_file.close();
 
     if(cost > 0 && !(tour_->empty())){
         std_msgs::String msg;
@@ -285,6 +432,7 @@ void FloorplanGraph::buildGraph()
     }
 
     next_node_counter_ = 0;
+    nodes_to_visit_ = *tour_;
 }
 
 std::pair<double,double> FloorplanGraph::transformGridToMap(int i, int j)
@@ -346,10 +494,7 @@ struct PointHash
 };
 
 
-double getDistance(Node n1, Node n2)
-{
-    return sqrt(pow(n1.x - n2.x, 2) + pow(n1.y - n2.y, 2));
-}
+
 
 double FloorplanGraph::aStar(Node start, Node goal)
 {
@@ -357,7 +502,7 @@ double FloorplanGraph::aStar(Node start, Node goal)
     std::unordered_map<Node, NodeStar*,PointHash> closedSet;
 
     // Create start node
-    double h = getDistance(start, goal);
+    double h = start.getDistance(goal);
     NodeStar* startNode = new NodeStar(start,0,h,h,nullptr);
 
     // Add start node to openSet
@@ -397,8 +542,8 @@ double FloorplanGraph::aStar(Node start, Node goal)
                 std::pair<double,double> point = transformGridToMap(i, j);
                 Node neighbor_node = {point.first,point.second,i,j};
                 
-                double tenetative_g = current->g + getDistance(current->node, neighbor_node);
-                double tenetative_h = getDistance(neighbor_node, goal);
+                double tenetative_g = current->g + current->node.getDistance(neighbor_node);
+                double tenetative_h = neighbor_node.getDistance(goal);
                 double tenetative_f = tenetative_g + tenetative_h;
                 if(!closedSet.count(neighbor_node) || tenetative_f < closedSet[neighbor_node]->f)
                 {

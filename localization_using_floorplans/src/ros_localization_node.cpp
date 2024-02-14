@@ -10,17 +10,17 @@ int main(int argc, char** argv)
 
     ros::NodeHandle nh("");
 
-    // FloorplanGraph floorplan_graph;
-    // floorplan_graph.initFloorplanGraph(nh);
+    FloorplanGraph floorplan_graph;
+    floorplan_graph.initFloorplanGraph(nh);
 
-
-
-    SimpleLocalizer simple_localizer(nh);
-    simple_localizer.setupFromParam();
+    // SimpleLocalizer simple_localizer(nh);
+    // simple_localizer.setupFromParam();
 
     ros::spin();
 
-    // floorplan_graph.path_file_.close();
-    simple_localizer.transformationFile_.close();
+    floorplan_graph.path_file_.close();
+    floorplan_graph.occupancy_file_.close();
+    floorplan_graph.occupancy_opt_file_.close();
+    // simple_localizer.transformationFile_.close();
     return 0;
 }

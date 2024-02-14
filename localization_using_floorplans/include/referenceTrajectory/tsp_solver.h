@@ -14,6 +14,7 @@ public:
     ~TSPSolver();
 
     void initTSPSolver(Eigen::MatrixXd weightedAdjacenyMatrix);
+    //void initTSPSolver(std::vector<std::pair<int,int>> adjacencyList);
 
     double solveTSP(std::vector<int>* path, int start);
     
