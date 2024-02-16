@@ -69,6 +69,8 @@ class SimpleLocalizer
         double d_l_;
         double theta_l_;
 
+        double transformationThreshold_;
+
         pcl::PointCloud<pcl::PointXYZ> depthCloud_;
 
         Eigen::Matrix4d transformationMatrix_;

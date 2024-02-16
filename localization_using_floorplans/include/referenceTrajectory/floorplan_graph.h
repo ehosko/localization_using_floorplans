@@ -38,8 +38,6 @@ struct Node
 
 };
 
-
-
 class FloorplanGraph
 {
 public:
@@ -74,6 +72,10 @@ private:
     void sampleNodes_uniform();
     void sampleNodes_random();
 
+    bool rewirePath(Eigen::Vector3d currentPos,double distance);
+
+    void logOccupancy(Eigen::Vector3d projectedVector);
+
     ros::Publisher ready_pub_;
     ros::Subscriber odom_sub_;
 
@@ -103,6 +105,7 @@ private:
     std::vector<int> nodes_to_visit_;
 
     double radius_;
+    double max_radius_;
     int num_samples_ = 0;
     int skip_distance_ = 0;
 

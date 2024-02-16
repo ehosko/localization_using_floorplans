@@ -16,7 +16,6 @@ SimpleLocalizer::~SimpleLocalizer()
 void SimpleLocalizer::setupFromParam()
 {
     std::string floorplan_path;
-    double ray_length;
 
     std::cout << "Setting up from param..." << std::endl;
 
@@ -27,6 +26,8 @@ void SimpleLocalizer::setupFromParam()
 
     std::string filename;
     nh_.getParam("floorplan_node/log_file", filename);
+    
+    nh_.getParam("floorplan_node/transformation_thresh", transformationThreshold_);
 
     sourceGenerator_ = SourceGenerator();
     sourceGenerator_.initSourceGenerator(nh_);
@@ -69,7 +70,7 @@ void SimpleLocalizer::setupFromParam()
     }
     else
     {
-        transformationFile_ << "x y z" << std::endl;
+        transformationFile_ << "x y z qx qy qz qw" << std::endl;
     }
 
     ros::spin();
@@ -163,16 +164,16 @@ void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
 
     if (position_delta > d_l_|| rotation_delta > theta_l_)
     {
-        std::cout << "Odometry changed enough to update the position" << std::endl;
-        std::cout << "Position: " << position << std::endl;
+        // std::cout << "Odometry changed enough to update the position" << std::endl;
+        // std::cout << "Position: " << position << std::endl;
         // Here update the position
         position_ = position;
         orientation_ = orientation;
         // Here generate the source cloud
         //sourceGenerator_.projectPosOnFloor(position_, orientation_);
 
-        targetGenerator_.generateTargetCloud(position_, orientation_);
-        // targetGenerator_.generateTargetCloud(floorplan_position_, orientation_);
+        //targetGenerator_.generateTargetCloud(position_, orientation_);
+        targetGenerator_.generateTargetCloud(floorplan_position_, orientation_);
         sourceGenerator_.generateSourceCloud(depthCloud_, orientation_, msg.header.stamp);
 
         // GICP needs at least 20 points
@@ -180,22 +181,45 @@ void SimpleLocalizer::odomCallback(const nav_msgs::Odometry& msg)
         {
             // Here compute the transformation matrix
             int hasConverged = computeTransformationGICP(sourceGenerator_._sourceCloud, targetGenerator_._targetCloud, transformationMatrix_);
-            //std::cout << "Transformation matrix: " << std::endl << transformationMatrix << std::endl;
+            //std::cout << "Transformation matrix: " << std::endl << transformationMatrix_ << std::endl;
             //std::cout << "Has converged: " << hasConverged << std::endl;
             ROS_INFO("\n******************** Has converged:  %d ********************\n", hasConverged);
 
             //calculate transformed position
             Eigen::Quaterniond q(transformationMatrix_.block<3, 3>(0, 0));
-            Eigen::Vector3d transformed_position = q * position_ + transformationMatrix_.block<3, 1>(0, 3);
-            // Eigen::Vector3d transformed_position = q * floorplan_position_ + transformationMatrix_.block<3, 1>(0, 3);
+            // Eigen::Vector3d transformed_position = q * position_ + transformationMatrix_.block<3, 1>(0, 3);
+            Eigen::Vector3d transformed_position = q * floorplan_position_ + transformationMatrix_.block<3, 1>(0, 3);
             Eigen::Quaterniond transformed_orientation = q * orientation_;
-            std::cout << "Transformed position: " << transformed_position << std::endl;
+
+            Eigen::Matrix3d rotationMatrix = q.normalized().toRotationMatrix();
+            Eigen::Vector3d normalVector(0.0, 0.0, 1.0); // Assuming floor is horizontal
+            normalVector = rotationMatrix * normalVector;
+
+            // Project the point onto the floor
+            double distance = -normalVector.dot(position_);
+            Eigen::Vector3d projectedVector = position_ - distance * normalVector;
+            projectedVector.z() = 0;
+
+            // std::cout << "Position: " << position_ << std::endl;
+            // std::cout << "Transformed position: " << transformed_position << std::endl;
+            // std::cout << "Projected position: " << projectedVector << std::endl;
+            // std::cout << "Orientation: " << orientation_.x() << " " <<  orientation_.y() << " " <<  orientation_.z() << " " << orientation_.w()<< std::endl;
+            // std::cout << "Transformed orientation: " << transformed_orientation.x() << " " <<  transformed_orientation.y() << " " <<  transformed_orientation.z() << " " << transformed_orientation.w()<< std::endl;
+            
             transformationFile_ << transformed_position.x() << " " << transformed_position.y() << " " << transformed_position.z() << 
                                     transformed_orientation.x() << transformed_orientation.y() << transformed_orientation.z() << transformed_orientation.w() << std::endl;
 
             if(hasConverged){
-              floorplan_position_ = transformed_position;
               publishTransformation(transformed_position, transformed_orientation);
+
+              if((transformed_position - projectedVector).norm() < transformationThreshold_){
+                //std::cout << "Transformed position is close enough to the current position" << std::endl;
+                floorplan_position_ = transformed_position;
+              }
+              else{
+                //std::cout << "Transformed position is not close enough to the current position" << std::endl;
+                floorplan_position_ = projectedVector;
+              }
             }
         }
         else
@@ -225,7 +249,7 @@ void SimpleLocalizer::syncCallback(const sensor_msgs::PointCloud2ConstPtr& cloud
     // Here only save the current cloud
     pcl::fromROSMsg(*cloud_msg, depthCloud_);
     odomCallback(*odom_msg);
-    ROS_INFO("\n******************** SYNCED********************\n");
+    //ROS_INFO("\n******************** SYNCED********************\n");
 
 }
 

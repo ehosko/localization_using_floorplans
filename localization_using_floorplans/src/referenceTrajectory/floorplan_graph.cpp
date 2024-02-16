@@ -28,6 +28,7 @@ void FloorplanGraph::initFloorplanGraph(ros::NodeHandle& nh)
     nh.getParam("floorplan_node/occupancy_threshold", occupancy_radius_);
 
     nh.getParam("floorplan_node/radius", radius_);
+    nh.getParam("floorplan_node/max_radius", max_radius_);
 
     nh.getParam("floorplan_node/skip_distance", skip_distance_);
 
@@ -100,7 +101,7 @@ void FloorplanGraph::odomCallback(const nav_msgs::Odometry& msg)
     Eigen::Vector3d position(msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z);
     Eigen::Quaterniond orientation(msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z);
 
-    std::cout<<"See if current node reahed"<< std::endl;
+    //std::cout<<"See if current node reahed"<< std::endl;
     if(reachedCurrentNode(position,orientation)){
         // Counter already increased during check
         broadcastTransform(nodes_[tour_->at(next_node_counter_)]);
@@ -111,8 +112,37 @@ void FloorplanGraph::odomCallback(const nav_msgs::Odometry& msg)
     occupancy_opt_file_ << ros::Time::now().toSec() << "," << occ << std::endl;
 }
 
+bool FloorplanGraph::rewirePath(Eigen::Vector3d projectedVector, double distance)
+{
+    // Get nearest node out of not visited nodes
+    // Get nearest node out of not visited nodes
+    double min_distance = distance;
+    int min_indx = -1;
+    for(int i = 0; i < tour_->size(); i++)
+    {
+        int indx = tour_->at(i);
+        Node node = nodes_[indx];
+        double distance = (Eigen::Vector3d(node.x, node.y, 0) - projectedVector).norm();
+        if(distance < min_distance && std::find(nodes_to_visit_.begin(), nodes_to_visit_.end(),indx)!=nodes_to_visit_.end())
+        {
+            min_distance = distance;
+            min_indx = i;
+        }
+    }
+
+    if(min_indx != -1)
+    {
+        next_node_counter_ = min_indx;
+        return true;
+    }
+
+    return false;
+}
+
 bool FloorplanGraph::reachedCurrentNode(Eigen::Vector3d pos, Eigen::Quaterniond q)
 {
+    //std::cout<<"Nodes to visit: "<< nodes_to_visit_.size()<< std::endl;
+
     //Project position onto floor
     // TODO: (ehosko) Check math behind this projection
     Eigen::Matrix3d rotationMatrix = q.normalized().toRotationMatrix();
@@ -123,19 +153,24 @@ bool FloorplanGraph::reachedCurrentNode(Eigen::Vector3d pos, Eigen::Quaterniond 
     double distance = -normalVector.dot(pos);
     Eigen::Vector3d projectedVector = pos - distance * normalVector;
 
+    // Eigen::Matrix3d rotationMatrix = q.normalized().toRotationMatrix();
+    // Eigen::Vector3d projectedVector = rotationMatrix.transpose() * pos;
+
+    projectedVector.z() = 0;
+
+    // Check if reached end
+    if(next_node_counter_ >= tour_->size())
+    {
+        return false;
+    }
+    
     int indx = tour_->at(next_node_counter_);
     Node currentNode =  nodes_[indx];
 
     path_file_ << next_node_counter_ << " " << projectedVector.x() << " " << projectedVector.y() << " " << currentNode.x << " " << currentNode.y << std::endl;
 
-    //Log total occupancy
-    for(int i = 0; i < nodes_to_visit_.size(); i++){
-        Node node = nodes_[nodes_to_visit_[i]];
-        if(std::abs(projectedVector.x() - node.x) < radius_ && std::abs(projectedVector.y() - node.y) < radius_)
-            nodes_to_visit_.erase(nodes_to_visit_.begin() + i);   
-    }
-    occupancy_file_ << ros::Time::now().toSec() << "," <<  1 - (double)(nodes_to_visit_.size())/nodes_.size() << std::endl;
-
+    //Log occupancy
+    logOccupancy(projectedVector);
     
     //Check if position in radius of current Node
     if(std::abs(projectedVector.x() - currentNode.x) < radius_ && std::abs(projectedVector.y() - currentNode.y) < radius_)
@@ -150,12 +185,38 @@ bool FloorplanGraph::reachedCurrentNode(Eigen::Vector3d pos, Eigen::Quaterniond 
             currentNode =  nodes_[indx];
         }
         std::cout<<"Reached Node "<< currentNode.x << " " << currentNode.y <<std::endl;
+
         //next_node_counter_++;
-        return true;
+        if(std::find(nodes_to_visit_.begin(), nodes_to_visit_.end(),indx)!=nodes_to_visit_.end())
+        {
+            return true;
+        }
+
+        //std::cout<<"Rewire Path because next node already visisted"<< std::endl;
+        return rewirePath(projectedVector, std::numeric_limits<double>::max());
+    }
+
+    Eigen::Vector3d nextNode = {currentNode.x, currentNode.y, 0};
+    //Check if postion too far from next node -> rewire
+    double distance_to_next = (nextNode - projectedVector).norm();
+    if(distance_to_next > max_radius_)
+    {
+        //std::cout<<"Rewire Path because maximum reached"<< std::endl;
+        return rewirePath(projectedVector, distance_to_next);
     }
 
     return false;
+}
 
+void FloorplanGraph::logOccupancy(Eigen::Vector3d projectedVector)
+{
+    //Log total occupancy
+    for(int i = 0; i < nodes_to_visit_.size(); i++){
+        Node node = nodes_[nodes_to_visit_[i]];
+        if(std::abs(projectedVector.x() - node.x) < radius_ && std::abs(projectedVector.y() - node.y) < radius_)
+            nodes_to_visit_.erase(nodes_to_visit_.begin() + i);   
+    }
+    occupancy_file_ << ros::Time::now().toSec() << "," <<  1 - (double)(nodes_to_visit_.size())/nodes_.size() << std::endl;
 }
 
 void FloorplanGraph::broadcastTransform(Node nextNode)
@@ -338,7 +399,7 @@ void FloorplanGraph::buildGraph()
 
     buildOccupancyGrid(contours);
     std::cout << "Occupancy Grid: " <<  occupancyGrid_.rows() << " " <<occupancyGrid_.cols() << std::endl;
-    std::cout << "Occupancy Grid: " <<  occupancyGrid_ << std::endl;
+    // std::cout << "Occupancy Grid: " <<  occupancyGrid_ << std::endl;
     
     // Add starting node
     std::pair<int,int> start_point = transformMapToGrid(0, 0);

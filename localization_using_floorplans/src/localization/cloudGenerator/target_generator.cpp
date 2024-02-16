@@ -210,12 +210,12 @@ void TargetGenerator::filterAccesiblePoints(std::vector<cv::Point2f>& accessible
     double y_min = boundaries[2];
     double y_max = boundaries[3];
 
-    for(int i = 0; i < foVPoints.size(); i++)
-    {
-        std::cout << "FoV point: " << foVPoints[i] << std::endl;
-    }
+    // for(int i = 0; i < foVPoints.size(); i++)
+    // {
+    //     std::cout << "FoV point: " << foVPoints[i] << std::endl;
+    // }
 
-    std::cout << "x_min: " << x_min << ", x_max: " << x_max << ", y_min: " << y_min << ", y_max: " << y_max << std::endl;
+    // std::cout << "x_min: " << x_min << ", x_max: " << x_max << ", y_min: " << y_min << ", y_max: " << y_max << std::endl;
 
     // std:: cout << "Number of candidates: " << candidates.size() << std::endl;
     // std::vector<cv::Point> foVPoints(&candidates[0], &candidates[0] + candidates.size() / 10);
@@ -226,15 +226,16 @@ void TargetGenerator::filterAccesiblePoints(std::vector<cv::Point2f>& accessible
         return;
     }
 
+    std::cout << "Start A* star..." << std::endl;
     // Filter out points that cannot be connected by A*
     for(int i = 0; i < foVPoints.size() - 1; i++)
     {
-        std::cout << "A* star iteration:" << i << ", with points: " << foVPoints[i] << "&" << foVPoints[i + 1] << std::endl;
+        //std::cout << "A* star iteration:" << i << ", with points: " << foVPoints[i] << "&" << foVPoints[i + 1] << std::endl;
 
 
         std::vector<cv::Point2f> path;
         bool success = aStar(foVPoints[i], foVPoints[i + 1], path,segments_,position,x_min, x_max, y_min, y_max, resolution_);
-        std::cout << "Success: " << success << std::endl;
+       // std::cout << "Success: " << success << std::endl;
         if(success)
         {
             for(int j = 0; j < path.size(); j++)
@@ -244,7 +245,7 @@ void TargetGenerator::filterAccesiblePoints(std::vector<cv::Point2f>& accessible
         }
         else
         {
-            std::cout << "No path found" << std::endl;
+            //std::cout << "No path found" << std::endl;
         }
     
     }

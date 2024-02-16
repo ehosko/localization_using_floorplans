@@ -253,15 +253,15 @@ void SourceGenerator::ProjectOnFloor(pcl::PointCloud<pcl::PointXYZ> depthCloudTr
     //     depthCloudTransformed.push_back(pcl::PointXYZ(pointTransformed(0), pointTransformed(1), pointTransformed(2)));
     // }
 
-    for(int i = 0; i < 5; i++)
-    {
-        std::cout << "Depth cloud point " << i << " x: " << depthCloudTransformed.points[i].x << "  y: " << depthCloudTransformed.points[i].y << "  z: " << depthCloudTransformed.points[i].z<< std::endl;
+    // for(int i = 0; i < 5; i++)
+    // {
+    //     std::cout << "Depth cloud point " << i << " x: " << depthCloudTransformed.points[i].x << "  y: " << depthCloudTransformed.points[i].y << "  z: " << depthCloudTransformed.points[i].z<< std::endl;
 
-        std::cout << "Depth cloud point " << depthCloudTransformed.width - i -1 << " x: " << depthCloudTransformed.points[depthCloudTransformed.width - i -1].x << "  y: " << depthCloudTransformed.points[depthCloudTransformed.width - i -1].y << "  z: " << depthCloudTransformed.points[depthCloudTransformed.width - i -1].z<< std::endl;
-    }
+    //     std::cout << "Depth cloud point " << depthCloudTransformed.width - i -1 << " x: " << depthCloudTransformed.points[depthCloudTransformed.width - i -1].x << "  y: " << depthCloudTransformed.points[depthCloudTransformed.width - i -1].y << "  z: " << depthCloudTransformed.points[depthCloudTransformed.width - i -1].z<< std::endl;
+    // }
 
     std::vector<double> minMaxPt = MinMaxPt(depthCloudTransformed);
-    std::cout << "Min x: " << minMaxPt[0] << "  Min y: " << minMaxPt[1] << "  Max x: " << minMaxPt[2] << "  Max y: " << minMaxPt[3] << std::endl;
+    ///std::cout << "Min x: " << minMaxPt[0] << "  Min y: " << minMaxPt[1] << "  Max x: " << minMaxPt[2] << "  Max y: " << minMaxPt[3] << std::endl;
     
     // Compute normal vector of floor
     Eigen::Matrix3d rotationMatrix = q.normalized().toRotationMatrix();
