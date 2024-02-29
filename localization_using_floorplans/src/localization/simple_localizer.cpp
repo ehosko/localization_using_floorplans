@@ -79,12 +79,14 @@ int SimpleLocalizer::computeTransformationGICP(pcl::PointCloud<pcl::PointXYZ> so
     transformationMatrix = gicp.getFinalTransformation().cast<double>();
 
     // Debugging purpose - to visualize point clouds
+    // std::string folder = "/home/michbaum/Projects/optag_EH/data/floorplan/";
+
     // pcl::PCDWriter wS;
-    // std::string file_name = "/home/michbaum/Projects/floorplanLocalization/data/SourceCloud.pcd";
+    // std::string file_name = folder + "SourceCloud.pcd";
     // wS.write<pcl::PointXYZ> (file_name, sourceCloud, false);
 
     // pcl::PCDWriter wT;
-    // file_name = "/home/michbaum/Projects/floorplanLocalization/data/TargetCloud.pcd";
+    // file_name = folder + "TargetCloud.pcd";
     // wT.write<pcl::PointXYZ> (file_name, targetCloud, false);
 
 
@@ -92,7 +94,7 @@ int SimpleLocalizer::computeTransformationGICP(pcl::PointCloud<pcl::PointXYZ> so
     // pcl::transformPointCloud(sourceCloud, *transformed_source, transformationMatrix.cast<float>());
 
     // pcl::PCDWriter wA;
-    // file_name = "/home/michbaum/Projects/floorplanLocalization/data/AligendCloud.pcd";
+    // file_name = folder + "AligendCloud.pcd";
     // wA.write<pcl::PointXYZ> (file_name, *transformed_source, false);
 
     return gicp.hasConverged();

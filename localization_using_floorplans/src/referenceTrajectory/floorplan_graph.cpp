@@ -184,8 +184,7 @@ bool FloorplanGraph::reachedCurrentNode(Eigen::Vector3d pos, Eigen::Quaterniond 
             indx = tour_->at(next_node_counter_);
             currentNode =  nodes_[indx];
         }
-        std::cout<<"Reached Node "<< currentNode.x << " " << currentNode.y <<std::endl;
-
+        
         // If in nodes to visit continue following path
         if(std::find(nodes_to_visit_.begin(), nodes_to_visit_.end(),indx)!=nodes_to_visit_.end())
         {
