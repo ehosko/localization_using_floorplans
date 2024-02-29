@@ -31,12 +31,14 @@ double TSPSolver::solveTSP(std::vector<int>* path,int start)
 
     double cost = ReadTourFile(path);
     //rotatePath(path, start);
-
+    std::cout << "Cost: " << cost << std::endl;
     return cost;
 }
 
 void TSPSolver::CreateTSPFile(Eigen::MatrixXd weightedAdjacenyMatrix)
 {
+    // Create TSP input file for LKH
+
     std::ofstream file(tsp_file_);
     file << "NAME: Floorplan" << std::endl;
     file << "TYPE: TSP" << std::endl;

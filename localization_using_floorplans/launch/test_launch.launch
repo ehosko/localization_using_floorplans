@@ -1,10 +1,10 @@
 <launch>
 
     <node name="floorplan_node" pkg="localization_using_floorplans" type="ros_localization_node" output="screen">
-        <param name="floorplan_path" value="/home/michbaum/Projects/optag_EH/data/floorplan/MazeOccupancyMap.png"/>
+        <param name="floorplan_path" value="/home/michbaum/Projects/optag_EH/data/floorplan/WarehouseOccupancyMap.png"/>
         <param name="floorplan_resolution" value="0.1"/>
-        <param name="floorplan_height" value="40"/>
-        <param name="floorplan_width" value="40"/>
+        <param name="floorplan_height" value="35"/>
+        <param name="floorplan_width" value="20"/>
         <param name="floorplan_origin_x" value="0.0"/>
         <param name="floorplan_origin_y" value="0.0"/>
         <param name="floorplan_origin_z" value="0.0"/>
@@ -26,11 +26,16 @@
 
         <param name="log_file" value="/home/michbaum/Projects/optag_EH/data/floorplan/transformation.txt"/>
 
-        <param name="num_samples" value="350"/>
+        <param name="num_samples" value="250"/>
         <param name="threshold" value="5"/>
-        <param name="skip_distance" value="5"/>
-        <param name="occupancy_threshold" value="3"/>
+        <param name="skip_distance" value="1"/> <!-- Distance to skip when sampling , 2 for maze-->
+        <param name="occupancy_threshold" value="1"/>   <!-- Threshold for occupancy grid, 3 for maze-->
         <param name="sample_method" value="random"/>
+        <param name="contours_traversable" value="false"/>
+        <param name="contour_cost_factor" value="300"/>
+
+        <param name="radius" value="1.5"/> <!-- Radius for the node on floorplan to be considered as visited -->
+        <param name="max_radius" value="10"/> 
 
         <param name="edge_log_file" value="/home/michbaum/Projects/optag_EH/data/floorplan/edges.txt"/>
         <param name="node_log_file" value="/home/michbaum/Projects/optag_EH/data/floorplan/nodes.txt"/>
@@ -38,6 +43,14 @@
         <param name="path_log_file" value="/home/michbaum/Projects/optag_EH/data/floorplan/path.txt"/>
 
         <param name="lkh_executable" value="/home/michbaum/Projects/LKH/LKH-2.0.9/LKH"/>
+
+        <param name="x_min" value="-15"/>
+        <param name="y_max" value="15"/>
+        <param name="x_max" value="5"/>
+        <param name="y_min" value="-20"/>
+
+        <param name="x_start" value="0"/>
+        <param name="y_start" value="0"/>
 
     </node>
 

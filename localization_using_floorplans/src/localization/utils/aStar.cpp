@@ -80,18 +80,8 @@ double getDistance(cv::Point2f p1, cv::Point2f p2){
 }
 
 
-bool aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv::Point2f>& path, std::vector<cv::Point2f> segments,Eigen::Vector3d pos,double x_min, double x_max, double y_min, double y_max,double resolution)
+bool aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv::Point2f>& path, std::vector<cv::Point2f> segments,Eigen::Vector3d pos,double x_min, double x_max, double y_min, double y_max,double resolution, double epsilon = 0.01)
 {
-    // Boundaries
-    // int x_min = 0;
-    // int x_max = image_width_;
-    // int y_min = 0;
-    // int y_max = image_height_;
-
-    // Resolution - voxel size
-    //double resolution = 0.1;
-    double epsilon = 0.01;   // Epsilon to check if at goal destination
-
     // Astar algorithm to find path from start to goal
     // Return true if path is found, false otherwise
     std::priority_queue<Node*,std::vector<Node*>,GreaterNode> openSet;
@@ -130,8 +120,6 @@ bool aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv::Point2f>& path, 
         {
             for(double j = y - resolution; j <= y + resolution; j += resolution)
             {
-                //std::cout << "Neighbor: " << i << "," << j << std::endl;
-
                 // Skip current node
                 if(std::abs(x-i) < std::numeric_limits<double>::epsilon() && std::abs(y-j) < std::numeric_limits<double>::epsilon())
                 {
@@ -160,7 +148,6 @@ bool aStar(cv::Point2f start, cv::Point2f goal, std::vector<cv::Point2f>& path, 
                         openSet.push(neighborNode);
                         closedSet[neighbor] = neighborNode;
 
-                        //std::cout << "Pushed Neighbor: " << i << "," << j << std::endl;
                     }
                 }
             }

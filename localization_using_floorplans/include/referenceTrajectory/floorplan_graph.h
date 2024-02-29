@@ -54,7 +54,6 @@ public:
 private:
 
     void buildGraph();
-    double aStar(Node start, Node goal);
     std::pair<double,double> transformGridToMap(int i, int j);
     std::pair<int,int> transformMapToGrid(double x, double y);
 
@@ -113,6 +112,9 @@ private:
 
     bool sample_uniform_ = false;
 
+    bool contours_traversable_ = false;
+    double contour_cost_factor_ = 300;
+
     //normal vector of the floor
     Eigen::Vector3d floorNormal_ = Eigen::Vector3d(0.0, 0.0, 1.0);
 
@@ -126,6 +128,14 @@ private:
 
     std::string occupancy_log_file_;
     std::string occupancy_opt_log_file_;
+
+    double x_min_ = 0;
+    double x_max_ = 0;
+    double y_min_ = 0;
+    double y_max_ = 0;
+
+    double start_x_ = 0;
+    double start_y_ = 0;
 };
 
 #endif // "FLOORPLANGRAPH_H"

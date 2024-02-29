@@ -13,9 +13,11 @@ int main(int argc, char** argv)
     bool use_floorplan;
     nh.getParam("floorplan_node/use_floorplan_loc", use_floorplan);
 
+    // Compute optimal trajectory and log coverage
     FloorplanGraph floorplan_graph;
     floorplan_graph.initFloorplanGraph(nh);
 
+    // Localization on floorplan
     SimpleLocalizer simple_localizer(nh);
     if (use_floorplan)
     {
@@ -24,7 +26,6 @@ int main(int argc, char** argv)
 
     ros::spin();
 
-    floorplan_graph.path_file_.close();
     floorplan_graph.occupancy_file_.close();
     floorplan_graph.occupancy_opt_file_.close();
 

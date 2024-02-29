@@ -15,7 +15,6 @@ SimpleRayCaster& SimpleRayCaster::operator=(const SimpleRayCaster& other)
 void SimpleRayCaster::initSimpleRayCaster(ros::NodeHandle& nh)
 {
     // Initialize SimpleRayCaster
-    std::cout << "Initializing SimpleRayCaster..." << std::endl;
     nh.getParam("floorplan_node/ray_length", p_ray_length_);
     nh.getParam("floorplan_node/focal_length", p_focal_length_);
     nh.getParam("floorplan_node/resolution_x", p_resolution_x_);
@@ -41,16 +40,6 @@ void SimpleRayCaster::initSimpleRayCaster(ros::NodeHandle& nh)
                             (voxel_size * p_downsampling_factor_))),
       p_resolution_y_);
 
-    std::string filename = "/home/michbaum/Projects/optag_EH/data/floorplan/points.txt";
-    pointsFile_.open(filename);
-    if(!pointsFile_.is_open())
-    {
-        std::cout << "Error opening file" << std::endl;
-    }
-    else
-    {
-        pointsFile_ << "x y z" << std::endl;
-    }
 }
 
 bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point2f>* result,
@@ -59,8 +48,6 @@ bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point2f>* result,
                                        const std::vector<cv::Point2f>& candidates,
                                        std::vector<double>& boundaries)
 {
-    std::cout << "Getting visible voxels..." << std::endl;
-    std::cout << "Candidates size: " << candidates.size() << std::endl;
 
     // Naive ray-casting
     Eigen::Vector3d camera_direction;
@@ -78,41 +65,35 @@ bool SimpleRayCaster::getVisibleVoxels(std::vector<cv::Point2f>* result,
     # pragma omp parallel
     for (int i = 0; i < c_res_x_; ++i) {
         for (int j = 0; j < c_res_y_; ++j) {
-        getDirectionVector(
-            &camera_direction,
-            static_cast<double>(i) / (static_cast<double>(c_res_x_) - 1.0),
-            static_cast<double>(j) / (static_cast<double>(c_res_y_) - 1.0));
-        direction = orientation * camera_direction;
-        double distance = 0.0;
-        while (distance < p_ray_length_) {
-            current_position = position + distance * direction;
-            distance += p_ray_step_;
+            getDirectionVector(
+                &camera_direction,
+                static_cast<double>(i) / (static_cast<double>(c_res_x_) - 1.0),
+                static_cast<double>(j) / (static_cast<double>(c_res_y_) - 1.0));
+            direction = orientation * camera_direction;
+            double distance = 0.0;
+            while (distance < p_ray_length_) {
+                current_position = position + distance * direction;
+                distance += p_ray_step_;
 
-            if (current_position.x() < x_min)
-                x_min = current_position.x();
-            if (current_position.x() > x_max)
-                x_max = current_position.x();
-            if (current_position.y() < y_min)
-                y_min = current_position.y();
-            if (current_position.y() > y_max)
-                y_max = current_position.y();
+                if (current_position.x() < x_min)
+                    x_min = current_position.x();
+                if (current_position.x() > x_max)
+                    x_max = current_position.x();
+                if (current_position.y() < y_min)
+                    y_min = current_position.y();
+                if (current_position.y() > y_max)
+                    y_max = current_position.y();
 
-            // Check voxel occupied
-            if (containingPoint(candidates, Eigen::Vector3d(current_position.x(), current_position.y(),0), observed_point)){
-                if (std::find(result->begin(), result->end(), observed_point) == result->end() ){
-                    pointsFile_ << observed_point.x << " " << observed_point.y << " " << 0 << std::endl;
-                    result->push_back(observed_point);
+                // Check voxel occupied
+                if (containingPoint(candidates, Eigen::Vector3d(current_position.x(), current_position.y(),0), observed_point)){
+                    if (std::find(result->begin(), result->end(), observed_point) == result->end() ){
+                        result->push_back(observed_point);
+                    }
+                        
+                    //result->push_back(observed_point);
+                    break;
                 }
-                    
-                //result->push_back(observed_point);
-                break;
             }
-
-            //result->push_back(cv::Point2f(current_position.x(), current_position.y()));
-
-            // map_->getVoxelCenter(&voxel_center, current_position);
-            // result->push_back(voxel_center);
-        }
         }
     }
 

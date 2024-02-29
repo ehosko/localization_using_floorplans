@@ -30,8 +30,6 @@ class SimpleLocalizer
         SimpleLocalizer(const ::ros::NodeHandle& nh) : nh_(nh), tfListener_(tfBuffer_) {} // Constructor
         ~SimpleLocalizer(); // Destructor
 
-        void localize();
-
         void setupFromParam();
 
         int computeTransformationGICP(pcl::PointCloud<pcl::PointXYZ> sourceCloud, 

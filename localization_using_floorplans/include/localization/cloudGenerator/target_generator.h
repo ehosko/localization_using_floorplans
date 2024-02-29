@@ -56,10 +56,14 @@ class TargetGenerator
         int l_max_ = 2; //Max length of segment
         //PCL Point Cloud
 
+        double epsilon_ = 0.01; //Resolution of the floorplan
+
         double resolution_ = 0.1; //Resolution of the floorplan
 
         SimpleRayCaster raycaster_;
 
+        double x_min_ = 0;
+        double y_max_ = 0;
 };
 
 #endif // TARGET_GENERATOR_H
