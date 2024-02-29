@@ -64,10 +64,10 @@ class SimpleLocalizer
         Eigen::Vector3d floorplan_position_;
         //Eigen::Quaterniond floorplan_orientation_;
         
-        double d_l_;
-        double theta_l_;
+        double d_l_; // distance threshold before updating estimate
+        double theta_l_; // angle threshold before updating estimate
 
-        double transformationThreshold_;
+        double transformationThreshold_; // threshold to determine if transformation is valid
 
         pcl::PointCloud<pcl::PointXYZ> depthCloud_;
 

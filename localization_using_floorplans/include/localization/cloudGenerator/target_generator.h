@@ -56,7 +56,7 @@ class TargetGenerator
         int l_max_ = 2; //Max length of segment
         //PCL Point Cloud
 
-        double epsilon_ = 0.01; //Resolution of the floorplan
+        double epsilon_ = 0.01; // Espilon to consider node reached
 
         double resolution_ = 0.1; //Resolution of the floorplan
 

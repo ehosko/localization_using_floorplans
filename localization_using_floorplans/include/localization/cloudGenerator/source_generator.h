@@ -42,10 +42,10 @@ class SourceGenerator
         void TransformPoints(pcl::PointCloud<pcl::PointXYZ> depthCloud,pcl::PointCloud<pcl::PointXYZ>::Ptr depthCloudTransform,Eigen::Quaterniond q,const ros::Time& timestamp);
         void ProjectOnFloor(pcl::PointCloud<pcl::PointXYZ> depthCloud,pcl::PointCloud<pcl::PointXYZ>::Ptr sourceCloud, Eigen::Quaterniond q);
 
-        Eigen::Transform<double, 3, Eigen::Affine> transform_;
-        Eigen::Transform<double, 3, Eigen::Affine> T_B_C_;
+        Eigen::Transform<double, 3, Eigen::Affine> transform_; // final transform
+        Eigen::Transform<double, 3, Eigen::Affine> T_B_C_; // Transform from camera to body
 
-        std::vector<geometry_msgs::TransformStamped> transform_msg_;
+        std::vector<geometry_msgs::TransformStamped> transform_msg_; // Transform message collection
 
 
         int timestamp_tolerance_ns_ = 1000000;

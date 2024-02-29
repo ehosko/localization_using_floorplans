@@ -90,52 +90,52 @@ private:
 
     double resolution_ = 0.1; //Resolution of the floorplan
 
-    double threshold_ = 5;
+    std::string lkh_executable_; // LKH executable
 
-    std::string lkh_executable_;
+    cv::Mat map_; //OpenCV Image
+    Eigen::MatrixXi occupancyGrid_; //Occupancy Grid
 
-    cv::Mat map_;
-    Eigen::MatrixXi occupancyGrid_;
+    std::vector<int>* tour_ = new std::vector<int>; // Optimal path
+    int next_node_counter_ = 0; // Counter for next node to visit
 
-    std::vector<int>* tour_ = new std::vector<int>;
-    int next_node_counter_ = 0;
-
-    std::vector<int> nodes_visited_;
+    std::vector<int> nodes_visited_; // Nodes visited
     std::vector<int> nodes_to_visit_;
 
-    double radius_;
-    double max_radius_;
-    int num_samples_ = 0;
-    int skip_distance_ = 0;
+    double radius_; // Radius to consider node as visited
+    double max_radius_; // Max radius to next node before rewirring
 
-    int occupancy_radius_ = 0;
+    int num_samples_ = 0; // Number of nodes to sample
+    int skip_distance_ = 0; // Skip distance  from occupied voxels for traversibility
 
-    bool sample_uniform_ = false;
+    int occupancy_radius_ = 0; // Radius to consider node as occupied
 
-    bool contours_traversable_ = false;
-    double contour_cost_factor_ = 300;
+    bool sample_uniform_ = false; // Sample nodes uniformly or randomly
+
+    bool contours_traversable_ = false; // If contours are traversable
+    double contour_cost_factor_ = 300; // If contours are traversable - multiplication factor of traversability cost
 
     //normal vector of the floor
     Eigen::Vector3d floorNormal_ = Eigen::Vector3d(0.0, 0.0, 1.0);
 
-    std::vector<Node> nodes_;
-    Eigen::MatrixXd weightedEdgeMatrix_;
+    std::vector<Node> nodes_; // Nodes
+    Eigen::MatrixXd weightedEdgeMatrix_; // Weighted Edge Matrix
 
     std::string edge_log_file_;
     std::string node_log_file_;
     std::string opt_path_log_file_;
     std::string path_log_file_;
 
-    std::string occupancy_log_file_;
+    std::string occupancy_log_file_; // Collect coverage per time
     std::string occupancy_opt_log_file_;
 
-    double x_min_ = 0;
-    double x_max_ = 0;
-    double y_min_ = 0;
-    double y_max_ = 0;
+    // To convert from image to map
+    double x_min_ = 0; // Min x of environment 
+    double x_max_ = 0; // Max x of environment
+    double y_min_ = 0; // Min y of environment
+    double y_max_ = 0; // Max y of environment
 
-    double start_x_ = 0;
-    double start_y_ = 0;
+    double start_x_ = 0; // Start x of agent
+    double start_y_ = 0; // Start y of agent
 };
 
 #endif // "FLOORPLANGRAPH_H"
